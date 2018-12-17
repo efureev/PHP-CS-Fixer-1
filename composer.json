@@ -1,5 +1,5 @@
 {
-    "name": "efureev/php-cs-fixer",
+    "name": "efureev/php-cs-fixer-1",
     "type": "application",
     "description": "A tool to automatically fix PHP code style",
     "license": "MIT",
