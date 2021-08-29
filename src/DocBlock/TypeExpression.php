@@ -116,13 +116,11 @@ final class TypeExpression
     private $namespaceUses;
 
     /**
-     * @param string                 $value
-     * @param null|NamespaceAnalysis $namespace
      * @param NamespaceUseAnalysis[] $namespaceUses
      */
-    public function __construct($value, $namespace, array $namespaceUses)
+    public function __construct(string $value, ?NamespaceAnalysis $namespace, array $namespaceUses)
     {
-        while ('' !== $value && false !== $value) {
+        while ('' !== $value) {
             Preg::match(
                 '{^'.self::REGEX_TYPES.'$}x',
                 $value,
@@ -144,15 +142,12 @@ final class TypeExpression
     /**
      * @return string[]
      */
-    public function getTypes()
+    public function getTypes(): array
     {
         return $this->types;
     }
 
-    /**
-     * @return null|string
-     */
-    public function getCommonType()
+    public function getCommonType(): ?string
     {
         $aliases = [
             'true' => 'bool',
@@ -195,10 +190,7 @@ final class TypeExpression
         return $mainType;
     }
 
-    /**
-     * @return bool
-     */
-    public function allowsNull()
+    public function allowsNull(): bool
     {
         foreach ($this->types as $type) {
             if (\in_array($type, ['null', 'mixed'], true)) {
@@ -209,7 +201,7 @@ final class TypeExpression
         return false;
     }
 
-    private function getParentType($type1, $type2)
+    private function getParentType(string $type1, string $type2): ?string
     {
         $types = [
             $this->normalize($type1),
@@ -232,12 +224,7 @@ final class TypeExpression
         return null;
     }
 
-    /**
-     * @param string $type
-     *
-     * @return string
-     */
-    private function normalize($type)
+    private function normalize(string $type): string
     {
         $aliases = [
             'true' => 'bool',

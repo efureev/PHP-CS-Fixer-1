@@ -36,7 +36,7 @@ jobs:
             execute-deployment: 'yes'
 
           - operating-system: 'ubuntu-20.04'
-            php-version: '7.4'
+            php-version: '8.0'
             job-description: 'with migration rules'
             execute-migration-rules: 'yes' # should be checked on highest supported PHP version
 
@@ -128,6 +128,10 @@ jobs:
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: php vendor/bin/php-coveralls --verbose
+
+      - name: Run PHP CS Fixer for PHP 7.0 types
+        if: matrix.php-version == '7.1' # we run on lowest supported version, we running it on higher would falsy expect more changes, eg `mixed` type on PHP 8
+        run: php php-cs-fixer fix --diff --dry-run -v --config .php-cs-fixer.php70types.php
 
       - name: Run PHP CS Fixer
         env:
