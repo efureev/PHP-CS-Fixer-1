@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,106 +14,139 @@
 
 namespace PhpCsFixer\Tests\Linter;
 
+use PhpCsFixer\Linter\Linter;
 use PhpCsFixer\Linter\LinterInterface;
+use PhpCsFixer\Linter\LintingException;
+use PhpCsFixer\Linter\TokenizerLinter;
 use PhpCsFixer\Tests\TestCase;
 use PhpCsFixer\Tokenizer\Token;
 use PhpCsFixer\Tokenizer\Tokens;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
  *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 abstract class AbstractLinterTestCase extends TestCase
 {
-    abstract public function testIsAsync();
+    abstract public function testIsAsync(): void;
 
-    public function testLintingAfterTokenManipulation()
+    public function testLintingAfterTokenManipulation(): void
     {
         $linter = $this->createLinter();
 
         $tokens = Tokens::fromCode("<?php \n#EOF\n");
-        $tokens->insertAt(1, new Token([T_NS_SEPARATOR, '\\']));
+        $tokens->insertAt(1, new Token([\T_NS_SEPARATOR, '\\']));
 
-        $this->expectException(\PhpCsFixer\Linter\LintingException::class);
+        $this->expectException(LintingException::class);
         $linter->lintSource($tokens->generateCode())->check();
     }
 
     /**
-     * @param string      $file
-     * @param null|string $errorRegExp
+     * @medium
      *
      * @dataProvider provideLintFileCases
      */
-    public function testLintFile($file, $errorRegExp = null)
+    #[DataProvider('provideLintFileCases')]
+    public function testLintFile(string $file, ?string $errorMessage = null): void
     {
-        if (null !== $errorRegExp) {
-            $this->expectException(\PhpCsFixer\Linter\LintingException::class);
-            $this->expectExceptionMessageRegExp($errorRegExp);
+        if (null !== $errorMessage) {
+            $this->expectException(LintingException::class);
+            $this->expectExceptionMessage($errorMessage);
+        } else {
+            $this->expectNotToPerformAssertions();
         }
 
         $linter = $this->createLinter();
-
-        $this->assertNull($linter->lintFile($file)->check());
+        $linter->lintFile($file)->check();
     }
 
     /**
-     * @return array
+     * @return iterable<int, array{0: string, 1?: string}>
      */
-    public function provideLintFileCases()
+    public static function provideLintFileCases(): iterable
     {
-        return [
-            [
-                __DIR__.'/../Fixtures/Linter/valid.php',
-            ],
-            [
-                __DIR__.'/../Fixtures/Linter/invalid.php',
-                '/syntax error, unexpected.*T_ECHO.*line 5/',
-            ],
+        yield [
+            __DIR__.'/../Fixtures/Linter/valid.php',
+        ];
+
+        yield [
+            __DIR__.'/../Fixtures/Linter/invalid.php',
+            \sprintf('Parse error: syntax error, unexpected %s on line 5.', \PHP_MAJOR_VERSION >= 8 ? 'token "echo"' : '\'echo\' (T_ECHO)'),
+        ];
+
+        yield [
+            __DIR__.'/../Fixtures/Linter/invalid-multiple.php',
+            'Fatal error: Multiple access type modifiers are not allowed on line 4.',
         ];
     }
 
     /**
-     * @param string      $source
-     * @param null|string $errorRegExp
+     * This test is documenting flaws in some Linters, exposing false-positives for files wrongly being considers as valid.
      *
-     * @dataProvider provideLintSourceCases
+     * @see Schrodinger's cat
      */
-    public function testLintSource($source, $errorRegExp = null)
+    public function testLintSchrodingersFile(): void
     {
-        if (null !== $errorRegExp) {
-            $this->expectException(\PhpCsFixer\Linter\LintingException::class);
-            $this->expectExceptionMessageRegExp($errorRegExp);
-        }
+        $file = __DIR__.'/../Fixtures/Linter/schrodingers-validity.php';
 
         $linter = $this->createLinter();
 
-        $this->assertNull($linter->lintSource($source)->check());
+        // Ideally this array shall be empty.
+        // We accept this imperfection for actual Fixer execution, while avoiding using those Linters for tests.
+        $notDetectingInvaldidSyntax = [
+            Linter::class,
+            TokenizerLinter::class,
+        ];
+
+        if (!\in_array(\get_class($linter), $notDetectingInvaldidSyntax, true)) {
+            $this->expectException(LintingException::class);
+        } else {
+            $this->expectNotToPerformAssertions();
+        }
+
+        $linter->lintFile($file)->check();
     }
 
     /**
-     * @return array
+     * @dataProvider provideLintSourceCases
      */
-    public function provideLintSourceCases()
+    #[DataProvider('provideLintSourceCases')]
+    public function testLintSource(string $source, ?string $errorMessage = null): void
     {
-        return [
-            [
-                '<?php echo 123;',
-            ],
-            [
-                '<?php
+        if (null !== $errorMessage) {
+            $this->expectException(LintingException::class);
+            $this->expectExceptionMessage($errorMessage);
+        } else {
+            $this->expectNotToPerformAssertions();
+        }
+
+        $linter = $this->createLinter();
+        $linter->lintSource($source)->check();
+    }
+
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideLintSourceCases(): iterable
+    {
+        yield [
+            '<?php echo 123;',
+        ];
+
+        yield [
+            '<?php
                     print "line 2";
                     print "line 3";
                     print "line 4";
                     echo echo;
                 ',
-                '/syntax error, unexpected.*T_ECHO.*line 5/',
-            ],
+            \sprintf('Parse error: syntax error, unexpected %s on line 5.', \PHP_MAJOR_VERSION >= 8 ? 'token "echo"' : '\'echo\' (T_ECHO)'),
         ];
     }
 
-    /**
-     * @return LinterInterface
-     */
-    abstract protected function createLinter();
+    abstract protected function createLinter(): LinterInterface;
 }

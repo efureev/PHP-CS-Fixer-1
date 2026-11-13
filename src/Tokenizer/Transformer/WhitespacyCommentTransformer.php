@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -22,50 +24,56 @@ use PhpCsFixer\Tokenizer\Tokens;
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
  *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class WhitespacyCommentTransformer extends AbstractTransformer
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function getCustomTokens()
+    public function getRequiredPhpVersionId(): int
+    {
+        return 5_00_00;
+    }
+
+    public function isCandidate(Tokens $tokens): bool
+    {
+        return $tokens->isAnyTokenKindsFound([\T_COMMENT, \T_DOC_COMMENT]);
+    }
+
+    public function process(Tokens $tokens): void
+    {
+        $slices = [];
+
+        foreach ($tokens as $index => $token) {
+            if (!$token->isComment()) {
+                continue;
+            }
+
+            $content = $token->getContent();
+            $trimmedContent = rtrim($content);
+
+            // nothing trimmed, nothing to do
+            if ($content === $trimmedContent) {
+                continue;
+            }
+
+            $whitespaces = substr($content, \strlen($trimmedContent));
+
+            $tokens[$index] = new Token([$token->getId(), $trimmedContent]);
+
+            if (isset($tokens[$index + 1]) && $tokens[$index + 1]->isWhitespace()) {
+                $tokens[$index + 1] = new Token([\T_WHITESPACE, $whitespaces.$tokens[$index + 1]->getContent()]);
+            } else {
+                $slices[$index + 1] = new Token([\T_WHITESPACE, $whitespaces]);
+            }
+        }
+
+        if ([] !== $slices) {
+            $tokens->insertSlices($slices);
+        }
+    }
+
+    public function getCustomTokens(): array
     {
         return [];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getRequiredPhpVersionId()
-    {
-        return 50000;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function process(Tokens $tokens, Token $token, $index)
-    {
-        if (!$token->isComment()) {
-            return;
-        }
-
-        $content = $token->getContent();
-        $trimmedContent = rtrim($content);
-
-        // nothing trimmed, nothing to do
-        if ($content === $trimmedContent) {
-            return;
-        }
-
-        $whitespaces = substr($content, \strlen($trimmedContent));
-
-        $tokens[$index] = new Token([$token->getId(), $trimmedContent]);
-
-        if (isset($tokens[$index + 1]) && $tokens[$index + 1]->isWhitespace()) {
-            $tokens[$index + 1] = new Token([T_WHITESPACE, $whitespaces.$tokens[$index + 1]->getContent()]);
-        } else {
-            $tokens->insertAt($index + 1, new Token([T_WHITESPACE, $whitespaces]));
-        }
     }
 }

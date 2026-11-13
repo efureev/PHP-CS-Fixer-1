@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,46 +14,58 @@
 
 namespace PhpCsFixer\Tests\Fixer\Basic;
 
+use PhpCsFixer\Fixer\Basic\EncodingFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Basic\EncodingFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Basic\EncodingFixer>
+ *
+ * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(EncodingFixer::class)]
 final class EncodingFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string       $expected
-     * @param string       $input
-     * @param \SplFileInfo $file
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input, $file)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null, ?\SplFileInfo $file = null): void
     {
         $this->doTest($expected, $input, $file);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string, 2?: \SplFileInfo}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            $this->prepareTestCase('test-utf8.case1.php', 'test-utf8.case1-bom.php'),
-            $this->prepareTestCase('test-utf8.case2.php', 'test-utf8.case2-bom.php'),
-        ];
+        yield self::prepareTestCase('test-utf8.case1.php', 'test-utf8.case1-bom.php');
+
+        yield self::prepareTestCase('test-utf8.case2.php', 'test-utf8.case2-bom.php');
+
+        yield ['<?php '];
     }
 
-    private function prepareTestCase($expectedFilename, $inputFilename = null)
+    /**
+     * @return array{string, null|string, \SplFileInfo}
+     */
+    private static function prepareTestCase(string $expectedFilename, ?string $inputFilename = null): array
     {
-        $expectedFile = $this->getTestFile(__DIR__.'/../../Fixtures/FixerTest/encoding/'.$expectedFilename);
-        $inputFile = $inputFilename ? $this->getTestFile(__DIR__.'/../../Fixtures/FixerTest/encoding/'.$inputFilename) : null;
+        $expectedFile = new \SplFileInfo(__DIR__.'/../../Fixtures/FixerTest/encoding/'.$expectedFilename);
+        $inputFile = null !== $inputFilename ? new \SplFileInfo(__DIR__.'/../../Fixtures/FixerTest/encoding/'.$inputFilename) : null;
 
         return [
-            file_get_contents($expectedFile->getRealPath()),
-            $inputFile ? file_get_contents($inputFile->getRealPath()) : null,
-            $inputFile ?: $expectedFile,
+            (string) file_get_contents($expectedFile->getRealPath()),
+            null !== $inputFile ? (string) file_get_contents($inputFile->getRealPath()) : null,
+            $inputFile ?? $expectedFile,
         ];
     }
 }

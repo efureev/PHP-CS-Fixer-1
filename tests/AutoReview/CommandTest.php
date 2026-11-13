@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,6 +16,9 @@ namespace PhpCsFixer\Tests\AutoReview;
 
 use PhpCsFixer\Console\Application;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversNothing;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Console\Command\Command;
 
 /**
@@ -22,37 +27,41 @@ use Symfony\Component\Console\Command\Command;
  * @internal
  *
  * @coversNothing
+ *
  * @group auto-review
  * @group covers-nothing
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversNothing]
+#[Group('auto-review')]
+#[Group('covers-nothing')]
 final class CommandTest extends TestCase
 {
     /**
      * @dataProvider provideCommandHasNameConstCases
-     *
-     * @param Command $command
      */
-    public function testCommandHasNameConst(Command $command)
+    #[DataProvider('provideCommandHasNameConstCases')]
+    public function testCommandHasNameConst(Command $command): void
     {
-        $this->assertSame($command->getName(), \constant(\get_class($command).'::COMMAND_NAME'));
+        self::assertNotNull($command->getName());
     }
 
-    public function provideCommandHasNameConstCases()
+    /**
+     * @return iterable<int, array{Command}>
+     */
+    public static function provideCommandHasNameConstCases(): iterable
     {
         $application = new Application();
         $commands = $application->all();
 
-        $names = array_filter(array_keys($commands), static function ($name) use ($commands) {
-            return
-                // is not an alias
-                !\in_array($name, $commands[$name]->getAliases(), true)
-                // and is our command
-                && 0 === strpos(\get_class($commands[$name]), 'PhpCsFixer\\')
-            ;
-        });
+        $names = array_filter(
+            array_keys($commands),
+            // @phpstan-ignore-next-line offsetAccess.notFound is not an alias and is our command
+            static fn (string $name): bool => !\in_array($name, $commands[$name]->getAliases(), true) && str_starts_with(\get_class($commands[$name]), 'PhpCsFixer\\'),
+        );
 
-        return array_map(static function ($name) use ($commands) {
-            return [$commands[$name]];
-        }, $names);
+        // @phpstan-ignore-next-line offsetAccess.notFound
+        return array_map(static fn (string $name): array => [$commands[$name]], $names);
     }
 }

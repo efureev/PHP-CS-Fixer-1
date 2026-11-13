@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -13,7 +15,9 @@
 namespace PhpCsFixer\Tests\Cache;
 
 use PhpCsFixer\Cache\Directory;
+use PhpCsFixer\Cache\DirectoryInterface;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @author Andreas Möller <am@localheinz.com>
@@ -21,40 +25,43 @@ use PhpCsFixer\Tests\TestCase;
  * @internal
  *
  * @covers \PhpCsFixer\Cache\Directory
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(Directory::class)]
 final class DirectoryTest extends TestCase
 {
-    public function testIsFinal()
+    public function testIsFinal(): void
     {
-        $reflection = new \ReflectionClass(\PhpCsFixer\Cache\Directory::class);
+        $reflection = new \ReflectionClass(Directory::class);
 
-        $this->assertTrue($reflection->isFinal());
+        self::assertTrue($reflection->isFinal());
     }
 
-    public function testImplementsDirectoryInterface()
+    public function testImplementsDirectoryInterface(): void
     {
-        $reflection = new \ReflectionClass(\PhpCsFixer\Cache\Directory::class);
+        $reflection = new \ReflectionClass(Directory::class);
 
-        $this->assertTrue($reflection->implementsInterface(\PhpCsFixer\Cache\DirectoryInterface::class));
+        self::assertTrue($reflection->implementsInterface(DirectoryInterface::class));
     }
 
-    public function testGetRelativePathToReturnsFileIfAboveLevelOfDirectoryName()
+    public function testGetRelativePathToReturnsFileIfAboveLevelOfDirectoryName(): void
     {
         $directoryName = __DIR__.\DIRECTORY_SEPARATOR.'foo';
         $file = __DIR__.\DIRECTORY_SEPARATOR.'hello.php';
 
         $directory = new Directory($directoryName);
 
-        $this->assertSame($file, $directory->getRelativePathTo($file));
+        self::assertSame($file, $directory->getRelativePathTo($file));
     }
 
-    public function testGetRelativePathToReturnsRelativePathIfWithinDirectoryName()
+    public function testGetRelativePathToReturnsRelativePathIfWithinDirectoryName(): void
     {
         $directoryName = __DIR__.\DIRECTORY_SEPARATOR.'foo';
         $file = __DIR__.\DIRECTORY_SEPARATOR.'foo'.\DIRECTORY_SEPARATOR.'bar'.\DIRECTORY_SEPARATOR.'hello.php';
 
         $directory = new Directory($directoryName);
 
-        $this->assertSame('bar'.\DIRECTORY_SEPARATOR.'hello.php', $directory->getRelativePathTo($file));
+        self::assertSame('bar'.\DIRECTORY_SEPARATOR.'hello.php', $directory->getRelativePathTo($file));
     }
 }

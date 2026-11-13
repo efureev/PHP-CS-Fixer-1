@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,6 +14,7 @@
 
 namespace PhpCsFixer\Tests\Test\Assert;
 
+use PhpCsFixer\Tests\TestCase;
 use PhpCsFixer\Tokenizer\Token;
 use PhpCsFixer\Tokenizer\Tokens;
 
@@ -19,32 +22,38 @@ use PhpCsFixer\Tokenizer\Tokens;
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
  *
  * @internal
+ *
+ * @phpstan-require-extends TestCase
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 trait AssertTokensTrait
 {
-    private function assertTokens(Tokens $expectedTokens, Tokens $inputTokens)
+    protected static function assertTokens(Tokens $expectedTokens, Tokens $inputTokens): void
     {
-        $option = ['JSON_PRETTY_PRINT'];
-
         foreach ($expectedTokens as $index => $expectedToken) {
+            if (!isset($inputTokens[$index])) {
+                static::fail(\sprintf("The token at index %d must be:\n%s, but is not set in the input collection.", $index, $expectedToken->toJson()));
+            }
+
             $inputToken = $inputTokens[$index];
 
-            $this->assertTrue(
+            self::assertTrue(
                 $expectedToken->equals($inputToken),
-                sprintf("The token at index %d must be:\n%s,\ngot:\n%s.", $index, $expectedToken->toJson($option), $inputToken->toJson($option))
+                \sprintf("The token at index %d must be:\n%s,\ngot:\n%s.", $index, $expectedToken->toJson(), $inputToken->toJson()),
             );
 
             $expectedTokenKind = $expectedToken->isArray() ? $expectedToken->getId() : $expectedToken->getContent();
-            $this->assertTrue(
+            self::assertTrue(
                 $inputTokens->isTokenKindFound($expectedTokenKind),
-                sprintf(
+                \sprintf(
                     'The token kind %s (%s) must be found in tokens collection.',
                     $expectedTokenKind,
-                    \is_string($expectedTokenKind) ? $expectedTokenKind : Token::getNameForId($expectedTokenKind)
-                )
+                    \is_string($expectedTokenKind) ? $expectedTokenKind : Token::getNameForId($expectedTokenKind),
+                ),
             );
         }
 
-        $this->assertSame($expectedTokens->count(), $inputTokens->count(), 'Both collections must have the same length.');
+        self::assertSameSize($expectedTokens, $inputTokens, 'Both collections must have the same length.');
     }
 }

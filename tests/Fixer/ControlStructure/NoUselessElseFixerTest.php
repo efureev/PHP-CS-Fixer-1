@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,34 +14,44 @@
 
 namespace PhpCsFixer\Tests\Fixer\ControlStructure;
 
+use PhpCsFixer\AbstractNoUselessElseFixer;
+use PhpCsFixer\Fixer\ControlStructure\NoUselessElseFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
 use PhpCsFixer\Tokenizer\Tokens;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
+ * @covers \PhpCsFixer\AbstractNoUselessElseFixer
  * @covers \PhpCsFixer\Fixer\ControlStructure\NoUselessElseFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\ControlStructure\NoUselessElseFixer>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(AbstractNoUselessElseFixer::class)]
+#[CoversClass(NoUselessElseFixer::class)]
 final class NoUselessElseFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider providePHPCloseTagCases
+     * @dataProvider provideFixCases
      */
-    public function testCloseTagCases($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function providePHPCloseTagCases()
+    /**
+     * @return iterable<array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
                     if (true) {
                         $b = $a > 2 ? "" : die
                         ?>
@@ -47,9 +59,10 @@ final class NoUselessElseFixerTest extends AbstractFixerTestCase
                     } else {
                         echo 798;
                     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     if (true) {
                         $b = $a > 2 ? "" : die
                         ?>
@@ -57,9 +70,10 @@ final class NoUselessElseFixerTest extends AbstractFixerTestCase
                     } else {
                         echo 798;
                     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     if (true) {
                         if($a) die
                         ?>
@@ -67,9 +81,10 @@ final class NoUselessElseFixerTest extends AbstractFixerTestCase
                     } else {
                         echo 798;
                     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     if (true) {
                         echo 1;
                         ?>
@@ -77,9 +92,10 @@ final class NoUselessElseFixerTest extends AbstractFixerTestCase
                     } else {
                         echo 798;
                     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     if (true) {
                         echo 777;
                         if(false) die ?>
@@ -87,9 +103,10 @@ final class NoUselessElseFixerTest extends AbstractFixerTestCase
                     } else {
                         echo 778;
                     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     if (true)
                         echo 3;
                     else {
@@ -97,50 +114,37 @@ final class NoUselessElseFixerTest extends AbstractFixerTestCase
                         echo 4;
                     }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     if (true)
                         echo 3;
                     '.'
                     ?><?php
                 echo 4;
                 ',
-                '<?php
+            '<?php
                     if (true)
                         echo 3;
                     else
                     ?><?php
                 echo 4;
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 if (true)
     echo 4;
 ?><?php echo 5;',
-                '<?php
+            '<?php
 if (true)
     echo 4;
 else?><?php echo 5;',
-            ],
         ];
-    }
 
-    /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideFixIfElseIfElseCases
-     */
-    public function testFixIfElseIfElse($expected, $input = null)
-    {
-        $this->doTest($expected, $input);
-    }
-
-    public function provideFixIfElseIfElseCases()
-    {
-        $expected =
+        yield from self::generateCases(
             '<?php
                 while(true) {
                     while(true) {
@@ -156,9 +160,7 @@ else?><?php echo 5;',
                         '.'
                     }
                 }
-            ';
-
-        $input =
+            ',
             '<?php
                 while(true) {
                     while(true) {
@@ -174,12 +176,10 @@ else?><?php echo 5;',
                         }
                     }
                 }
-            ';
+            ',
+        );
 
-        $cases = $this->generateCases($expected, $input);
-
-        $expected =
-            '<?php
+        yield from self::generateCases('<?php
                 while(true) {
                     while(true) {
                         if($a) {
@@ -191,12 +191,9 @@ else?><?php echo 5;',
                         }
                     }
                 }
-            ';
+            ');
 
-        $cases = array_merge($cases, $this->generateCases($expected));
-
-        $expected =
-            '<?php
+        yield from self::generateCases('<?php
                 while(true) {
                     while(true) {
                         if ($a) {
@@ -212,11 +209,9 @@ else?><?php echo 5;',
                         }
                     }
                 }
-            ';
+            ');
 
-        $cases = array_merge($cases, $this->generateCases($expected));
-
-        $cases[] = [
+        yield [
             '<?php
                 if ($a)
                     echo 1789;
@@ -231,9 +226,10 @@ else?><?php echo 5;',
                     }
                 else
                     echo 4;
-            ', ];
+            ',
+        ];
 
-        $cases[] = [
+        yield [
             '<?php
                 if ($a)
                     echo 1789;
@@ -247,53 +243,35 @@ else?><?php echo 5;',
                         return 1;
                 } else
                     echo 4;
-            ', ];
+            ',
+        ];
 
-        return $cases;
-    }
-
-    /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideFixIfElseCases
-     */
-    public function testFixIfElse($expected, $input = null)
-    {
-        $this->doTest($expected, $input);
-    }
-
-    public function provideFixIfElseCases()
-    {
-        $expected =
+        yield from self::generateCases(
             '<?php
+            while(true) {
                 while(true) {
-                    while(true) {
-                        if ($a) {
-                            %s
-                        }  '.'
-                            echo 1;
-                        '.'
+                    if ($a) {
+                        %s
+                    }  '.'
+                        echo 1;
+                    '.'
+                }
+            }
+        ',
+            '<?php
+            while(true) {
+                while(true) {
+                    if ($a) {
+                        %s
+                    } else {
+                        echo 1;
                     }
                 }
-            ';
+            }
+        ',
+        );
 
-        $input =
-            '<?php
-                while(true) {
-                    while(true) {
-                        if ($a) {
-                            %s
-                        } else {
-                            echo 1;
-                        }
-                    }
-                }
-            ';
-
-        $cases = $this->generateCases($expected, $input);
-
-        $cases[] = [
+        yield [
             '<?php
                 if ($a) {
                     GOTO jump;
@@ -314,25 +292,8 @@ else?><?php echo 5;',
             ',
         ];
 
-        return $cases;
-    }
-
-    /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideFixNestedIfCases
-     */
-    public function testFixNestedIf($expected, $input = null)
-    {
-        $this->doTest($expected, $input);
-    }
-
-    public function provideFixNestedIfCases()
-    {
-        return [
-            [
-                '<?php
+        yield 'nested if' => [
+            '<?php
                     if ($x) {
                         if ($y) {
                             return 1;
@@ -343,7 +304,7 @@ else?><?php echo 5;',
                         return 3;
                     '.'
                 ',
-                '<?php
+            '<?php
                     if ($x) {
                         if ($y) {
                             return 1;
@@ -354,50 +315,38 @@ else?><?php echo 5;',
                         return 3;
                     }
                 ',
-            ],
         ];
-    }
 
-    /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideFixEmptyElseCases
-     */
-    public function testFixEmptyElse($expected, $input = null)
-    {
-        $this->doTest($expected, $input);
-    }
-
-    public function provideFixEmptyElseCases()
-    {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
                     if (false)
                         echo 1;
                     '.'
                 ',
-                '<?php
+            '<?php
                     if (false)
                         echo 1;
                     else{}
                 ',
-            ],
-            [
-                '<?php if($a){}',
-                '<?php if($a){}else{}',
-            ],
-            [
-                '<?php if($a){ $a = ($b); }  ',
-                '<?php if($a){ $a = ($b); } else {}',
-            ],
-            [
-                '<?php if ($a) {;}   if ($a) {;}  /**/ if($a){}',
-                '<?php if ($a) {;} else {} if ($a) {;} else {/**/} if($a){}else{}',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php if($a){}',
+            '<?php if($a){}else{}',
+        ];
+
+        yield [
+            '<?php if($a){ $a = ($b); }  ',
+            '<?php if($a){ $a = ($b); } else {}',
+        ];
+
+        yield [
+            '<?php if ($a) {;}   if ($a) {;}  /**/ if($a){}',
+            '<?php if ($a) {;} else {} if ($a) {;} else {/**/} if($a){}else{}',
+        ];
+
+        yield [
+            '<?php
                     if /**/($a) /**/{ //
                         /**/
                         /**/return/**/1/**/;
@@ -407,7 +356,7 @@ else?><?php echo 5;',
                         //
                     /**/
                 ',
-                '<?php
+            '<?php
                     if /**/($a) /**/{ //
                         /**/
                         /**/return/**/1/**/;
@@ -417,9 +366,10 @@ else?><?php echo 5;',
                         //
                     }/**/
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     if ($a) {
                         if ($b) {
                             if ($c) {
@@ -434,7 +384,7 @@ else?><?php echo 5;',
                     }  //
                     //
                 ',
-                '<?php
+            '<?php
                     if ($a) {
                         if ($b) {
                             if ($c) {
@@ -449,82 +399,76 @@ else?><?php echo 5;',
                     } else {//
                     }//
                 ',
-            ],
         ];
-    }
 
-    /**
-     * @param string $expected
-     *
-     * @dataProvider provideNegativeCases
-     */
-    public function testNegativeCases($expected)
-    {
-        $this->doTest($expected);
-    }
-
-    public function provideNegativeCases()
-    {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
                     if ($a0) {
                         //
                     } else {
                         echo 0;
                     }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     if (false)
                         echo "a";
                     else
 
                     echo "a";
                 ',
-            ],
-            [
-                '<?php if($a2){;} else {echo 27;}',
-            ],
-            [
-                '<?php if ($a3) {test();} else {echo 3;}',
-            ],
-            [
-                '<?php if ($a4) {$b = function () {};} else {echo 4;}',
-            ],
-            [
-                '<?php if ($a5) {$b = function () use ($a){};} else {echo 5;}',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php if($a2){;} else {echo 27;}',
+        ];
+
+        yield [
+            '<?php if ($a3) {test();} else {echo 3;}',
+        ];
+
+        yield [
+            '<?php if ($a4) {$b = function () {};} else {echo 4;}',
+        ];
+
+        yield [
+            '<?php if ($a5) {$b = function () use ($a){};} else {echo 5;}',
+        ];
+
+        yield [
+            '<?php
                     if ($a) {
                         if ($b) return;
                     } else {
                         echo 1;
                     }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     if ($a) {
                         if ($b) throw new \Exception();
                     } else {
                         echo 1;
                     }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     if ($a) {
                         if ($b) { throw new \Exception(); }
                     } else {
                         echo 1;
                     }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     $a = true; // 6
                     if (true === $a)
                         $b = true === $a ? 1 : die;
@@ -533,9 +477,10 @@ else?><?php echo 5;',
 
                     echo "end";
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     $a = true; // 6
                     if (true === $a)
                         $b = true === $a ? 1 : exit(1);
@@ -544,9 +489,10 @@ else?><?php echo 5;',
 
                     echo "end";
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     $a = true; // 6
                     if (true === $a)
                         $b = true === $a ? 1 : exit(1);
@@ -555,9 +501,10 @@ else?><?php echo 5;',
 
                     echo "end";
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     if (false)
                         die;
                     elseif (true)
@@ -569,9 +516,10 @@ else?><?php echo 5;',
                     else
                         echo 7;
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     $tmp = function($b){$b();};
                     $a =1;
                     return $tmp(function () use ($a) {
@@ -582,9 +530,10 @@ else?><?php echo 5;',
                         }
                     });
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     $tmp = function($b){$b();};
                     $a =1;
                     return $tmp(function () use ($a) {
@@ -597,9 +546,10 @@ else?><?php echo 5;',
                         }
                     });
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     return function() {
                         if (false) {
 
@@ -609,9 +559,10 @@ else?><?php echo 5;',
                             echo 1;
                         }
                     };',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     return function() {
                         if (false) {
                             return 1;
@@ -621,83 +572,7 @@ else?><?php echo 5;',
                             echo 1;
                         }
                     };',
-            ],
         ];
-    }
-
-    /**
-     * @param string $source
-     * @param int    $index
-     *
-     * @dataProvider provideBlockDetectionCases
-     */
-    public function testBlockDetection(array $expected, $source, $index)
-    {
-        Tokens::clearCache();
-        $tokens = Tokens::fromCode($source);
-
-        $method = new \ReflectionMethod($this->fixer, 'getPreviousBlock');
-        $method->setAccessible(true);
-
-        $result = $method->invoke($this->fixer, $tokens, $index);
-
-        $this->assertSame($expected, $result);
-    }
-
-    public function provideBlockDetectionCases()
-    {
-        $cases = [];
-
-        $source = '<?php
-                    if ($a)
-                        echo 1;
-                    elseif ($a) ///
-                        echo 2;
-                    else if ($b) /**/ echo 3;
-                    else
-                        echo 4;
-                    ';
-        $cases[] = [[2, 11], $source, 13];
-        $cases[] = [[13, 24], $source, 26];
-        $cases[] = [[13, 24], $source, 26];
-        $cases[] = [[26, 39], $source, 41];
-
-        $source = '<?php
-                    if ($a) {
-                        if ($b) {
-
-                        }
-                        echo 1;
-                    } elseif (true) {
-                        echo 2;
-                    } else if (false) {
-                        echo 3;
-                    } elseif ($c) {
-                        echo 4;
-                    } else
-                        echo 1;
-                    ';
-        $cases[] = [[2, 25], $source, 27];
-        $cases[] = [[27, 40], $source, 42];
-        $cases[] = [[59, 72], $source, 74];
-
-        return $cases;
-    }
-
-    /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideConditionsWithoutBracesCases
-     */
-    public function testConditionsWithoutBraces($expected, $input = null)
-    {
-        $this->doTest($expected, $input);
-    }
-
-    public function provideConditionsWithoutBracesCases()
-    {
-        $cases = [];
         $statements = [
             'die;',
             'throw new Exception($i);',
@@ -708,50 +583,11 @@ else?><?php echo 5;',
             'foreach($a as $b){throw new Exception($i);}',
         ];
 
-        $ifTemplate = '<?php
-            if ($a === false)
-            {
-                if ($v) %s
-            }
-            else
-                $ret .= $value;
-
-            return $ret;'
-        ;
-
-        $ifElseIfTemplate = '<?php
-            if ($a === false)
-            {
-                if ($v) { $ret = "foo"; }
-                elseif($a)
-                    %s
-            }
-            else
-                $ret .= $value;
-
-            return $ret;'
-        ;
-
-        $ifElseTemplate = '<?php
-            if ($a === false)
-            {
-                if ($v) { $ret = "foo"; }
-                else
-                    %s
-            }
-            else
-                $ret .= $value;
-
-            return $ret;'
-        ;
-
         foreach ($statements as $statement) {
-            $cases[] = [sprintf($ifTemplate, $statement)];
-            $cases[] = [sprintf($ifElseTemplate, $statement)];
-            $cases[] = [sprintf($ifElseIfTemplate, $statement)];
+            yield from self::generateConditionsWithoutBracesCase($statement);
         }
 
-        $cases[] = [
+        yield [
             '<?php
                 if ($a === false)
                 {
@@ -772,41 +608,169 @@ else?><?php echo 5;',
                 return $ret;',
         ];
 
-        return $cases;
+        yield from self::generateConditionsWithoutBracesCase('throw new class extends Exception{};');
+
+        yield from self::generateConditionsWithoutBracesCase('throw new class ($a, 9) extends Exception{ public function z($a, $b){ echo 7;} };');
+
+        yield [
+            '<?php if ($a) {return null;}   return function () {}; ',
+            '<?php if ($a) {return null;} else { return function () {}; }',
+        ];
+
+        yield [
+            '<?php if ($a) {return null;}   return new class {}; ',
+            '<?php if ($a) {return null;} else { return new class {}; }',
+        ];
+
+        yield [
+            '<?php if ($a) {return;} else { foo(); function bar() {} }',
+        ];
+
+        yield [
+            '<?php if ($a) {return;} else { abstract class Foo {} }',
+        ];
+
+        yield [
+            '<?php if ($a) {return;} else { interface Foo {} }',
+        ];
     }
 
     /**
-     * @param string            $input
-     * @param string<int, bool> $indexes
+     * @dataProvider provideFix80Cases
+     *
+     * @requires PHP >= 8.0.0
+     */
+    #[DataProvider('provideFix80Cases')]
+    #[RequiresPhp('>= 8.0.0')]
+    public function testFix80(string $expected, ?string $input = null): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<array{0: string, 1?: string}>
+     */
+    public static function provideFix80Cases(): iterable
+    {
+        $cases = [
+            '$bar = $foo1 ?? throw new \Exception($e);',
+            '$callable = fn() => throw new Exception();',
+            '$value = $falsableValue ?: throw new InvalidArgumentException();',
+            '$value = !empty($array)
+                    ? reset($array)
+                    : throw new InvalidArgumentException();',
+            '$a = $condition && throw new Exception();',
+            '$a = $condition || throw new Exception();',
+            '$a = $condition and throw new Exception();',
+            '$a = $condition or throw new Exception();',
+        ];
+
+        $template = '<?php
+                if ($foo) {
+                    %s
+                } else {
+                    echo 123;
+                }
+            ';
+
+        foreach ($cases as $index => $case) {
+            yield \sprintf('PHP8 Negative case %d', $index) => [\sprintf($template, $case)];
+        }
+
+        yield from self::generateConditionsWithoutBracesCase('$b = $a ?? throw new Exception($i);');
+    }
+
+    /**
+     * @param list<int> $expected
+     *
+     * @dataProvider provideBlockDetectionCases
+     */
+    #[DataProvider('provideBlockDetectionCases')]
+    public function testBlockDetection(array $expected, string $source, int $index): void
+    {
+        Tokens::clearCache();
+        $tokens = Tokens::fromCode($source);
+
+        $result = \Closure::bind(static fn (AbstractNoUselessElseFixer $fixer): array => $fixer->getPreviousBlock($tokens, $index), null, AbstractNoUselessElseFixer::class)($this->fixer);
+
+        self::assertSame($expected, $result);
+    }
+
+    /**
+     * @return iterable<int, array{list<int>, string, int}>
+     */
+    public static function provideBlockDetectionCases(): iterable
+    {
+        $source = '<?php
+                    if ($a)
+                        echo 1;
+                    elseif ($a) ///
+                        echo 2;
+                    else if ($b) /**/ echo 3;
+                    else
+                        echo 4;
+                    ';
+
+        yield [[2, 11], $source, 13];
+
+        yield [[13, 24], $source, 26];
+
+        yield [[26, 39], $source, 41];
+
+        $source = '<?php
+                    if ($a) {
+                        if ($b) {
+
+                        }
+                        echo 1;
+                    } elseif (true) {
+                        echo 2;
+                    } else if (false) {
+                        echo 3;
+                    } elseif ($c) {
+                        echo 4;
+                    } else
+                        echo 1;
+                    ';
+
+        yield [[2, 25], $source, 27];
+
+        yield [[27, 40], $source, 42];
+
+        yield [[59, 72], $source, 74];
+    }
+
+    /**
+     * @param array<int, bool> $indexes
      *
      * @dataProvider provideIsInConditionWithoutBracesCases
      */
-    public function testIsInConditionWithoutBraces($indexes, $input)
+    #[DataProvider('provideIsInConditionWithoutBracesCases')]
+    public function testIsInConditionWithoutBraces(array $indexes, string $input): void
     {
-        $reflection = new \ReflectionObject($this->fixer);
-        $method = $reflection->getMethod('isInConditionWithoutBraces');
-        $method->setAccessible(true);
-
         $tokens = Tokens::fromCode($input);
+
         foreach ($indexes as $index => $expected) {
-            $this->assertSame(
+            self::assertSame(
                 $expected,
-                $method->invoke($this->fixer, $tokens, $index, 0),
-                sprintf('Failed in condition without braces check for index %d', $index)
+                \Closure::bind(static fn (AbstractNoUselessElseFixer $fixer): bool => $fixer->isInConditionWithoutBraces($tokens, $index, 0), null, AbstractNoUselessElseFixer::class)($this->fixer),
+                \sprintf('Failed in condition without braces check for index %d', $index),
             );
         }
     }
 
-    public function provideIsInConditionWithoutBracesCases()
+    /**
+     * @return iterable<int, array{array<int, bool>, string}>
+     */
+    public static function provideIsInConditionWithoutBracesCases(): iterable
     {
-        return [
+        yield [
             [
-                [
-                    18 => false, // return
-                    25 => false, // return
-                    36 => false, // return
-                ],
-                '<?php
+                18 => false, // return
+                25 => false, // return
+                36 => false, // return
+            ],
+            '<?php
                     if ($x) {
                         if ($y) {
                             return 1;
@@ -817,148 +781,201 @@ else?><?php echo 5;',
                         return 3;
                     }
                 ',
-            ],
+        ];
+
+        yield [
             [
-                [
-                    0 => false,
-                    29 => false, // throw
-                ],
-                '<?php
+                0 => false,
+                29 => false, // throw
+            ],
+            '<?php
                     if ($v) { $ret = "foo"; }
                     else
                         if($a){}else{throw new Exception($i);}
                 ',
-            ],
+        ];
+
+        yield [
             [
-                [
-                    0 => false,
-                    38 => true, // throw
-                ],
-                '<?php
+                0 => false,
+                38 => true, // throw
+            ],
+            '<?php
                     if ($v) { $ret = "foo"; }
                     else
                         for($i =0;$i < 1;++$i) throw new Exception($i);
                 ',
-            ],
+        ];
+
+        yield [
             [
-                [
-                    0 => false,
-                    26 => true, // throw
-                    28 => true, // new
-                    30 => true, // Exception
-                ],
-                '<?php
+                0 => false,
+                26 => true, // throw
+                28 => true, // new
+                30 => true, // Exception
+            ],
+            '<?php
                     if ($v) { $ret = "foo"; }
                     else
                         while(false){throw new Exception($i);}
                 ',
-            ],
+        ];
+
+        yield [
             [
-                [
-                    0 => false,
-                    30 => true, // throw
-                    32 => true, // new
-                    34 => true, // Exception
-                ],
-                '<?php
+                0 => false,
+                30 => true, // throw
+                32 => true, // new
+                34 => true, // Exception
+            ],
+            '<?php
                     if ($v) { $ret = "foo"; }
                     else
                         foreach($a as $b){throw new Exception($i);}
                 ',
-            ],
+        ];
+
+        yield [
             [
-                [
-                    0 => false,
-                    25 => true, // throw
-                    27 => true, // new
-                    29 => true, // Exception
-                ],
-                '<?php
+                0 => false,
+                25 => true, // throw
+                27 => true, // new
+                29 => true, // Exception
+            ],
+            '<?php
                     if ($v) { $ret = "foo"; }
                     else
                         while(false)throw new Exception($i);
                 ',
-            ],
+        ];
+
+        yield [
             [
-                [
-                    26 => true, // throw
-                ],
-                '<?php
+                26 => true, // throw
+            ],
+            '<?php
                     if ($v) { $ret = "foo"; }
                     elseif($a)
                         do{throw new Exception($i);}while(false);
                 ',
-            ],
+        ];
+
+        yield [
             [
-                [
-                    4 => false, // 1
-                    13 => true, // if (2nd)
-                    21 => true, // true
-                    33 => true, // while
-                    43 => false, // echo
-                    45 => false, // 2
-                    46 => false, // ;
-                    51 => false, // echo (123)
-                ],
-                '<?php
+                4 => false, // 1
+                13 => true, // if (2nd)
+                21 => true, // true
+                33 => true, // while
+                43 => false, // echo
+                45 => false, // 2
+                46 => false, // ;
+                51 => false, // echo (123)
+            ],
+            '<?php
                     echo 1;
                     if ($a) if ($a) while(true)echo 1;
                     elseif($c) while(true){if($d){echo 2;}};
                     echo 123;
                 ',
-            ],
+        ];
+
+        yield [
             [
-                [
-                    2 => false, // echo
-                    13 => true, // echo
-                    15 => true, // 2
-                    20 => true, // die
-                    23 => false, // echo
-                ],
-                '<?php
+                2 => false, // echo
+                13 => true, // echo
+                15 => true, // 2
+                20 => true, // die
+                23 => false, // echo
+            ],
+            '<?php
                     echo 1;
                     if ($a) echo 2;
                     else die; echo 3;
                 ',
-            ],
+        ];
+
+        yield [
             [
-                [
-                    8 => true,  // die
-                    9 => true,  // /**/
-                    15 => true, // die
-                ],
-                '<?php
+                8 => true,  // die
+                9 => true,  // /**/
+                15 => true, // die
+            ],
+            '<?php
                     if ($a)
                         die/**/;
                     else
                         /**/die/**/;#
                 ',
-            ],
+        ];
+
+        yield [
             [
-                [
-                    8 => true,  // die
-                    9 => true,  // /**/
-                    15 => true, // die
-                ],
-                '<?php
+                8 => true,  // die
+                9 => true,  // /**/
+                15 => true, // die
+            ],
+            '<?php
                     if ($a)
                         die/**/;
                     else
                         /**/die/**/?>
                 ',
-            ],
         ];
     }
 
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @return array<string, string>
+     * @return iterable<array{0: non-empty-string, 1?: non-empty-string}>
      */
-    private function generateCases($expected, $input = null)
+    private static function generateConditionsWithoutBracesCase(string $statement): iterable
+    {
+        $ifTemplate = '<?php
+            if ($a === false)
+            {
+                if ($v) %s
+            }
+            else
+                $ret .= $value;
+
+            return $ret;';
+
+        $ifElseIfTemplate = '<?php
+            if ($a === false)
+            {
+                if ($v) { $ret = "foo"; }
+                elseif($a)
+                    %s
+            }
+            else
+                $ret .= $value;
+
+            return $ret;';
+
+        $ifElseTemplate = '<?php
+            if ($a === false)
+            {
+                if ($v) { $ret = "foo"; }
+                else
+                    %s
+            }
+            else
+                $ret .= $value;
+
+            return $ret;';
+
+        yield [\sprintf($ifTemplate, $statement)];
+
+        yield [\sprintf($ifElseTemplate, $statement)];
+
+        yield [\sprintf($ifElseIfTemplate, $statement)];
+    }
+
+    /**
+     * @return iterable<array{0: string, 1?: string}>
+     */
+    private static function generateCases(string $expected, ?string $input = null): iterable
     {
         $cases = [];
+
         foreach ([
             'exit;',
             'exit();',
@@ -986,13 +1003,17 @@ else?><?php echo 5;',
             'throw new \Exception((string)12+1);',
         ] as $case) {
             if (null === $input) {
-                $cases[] = [sprintf($expected, $case)];
-                $cases[] = [sprintf($expected, strtoupper($case))];
-                $cases[] = [sprintf($expected, strtolower($case))];
+                $cases[] = [\sprintf($expected, $case)];
+                $cases[] = [\sprintf($expected, strtoupper($case))];
+                if ($case !== strtolower($case)) {
+                    $cases[] = [\sprintf($expected, strtolower($case))];
+                }
             } else {
-                $cases[] = [sprintf($expected, $case), sprintf($input, $case)];
-                $cases[] = [sprintf($expected, strtoupper($case)), sprintf($input, strtoupper($case))];
-                $cases[] = [sprintf($expected, strtolower($case)), sprintf($input, strtolower($case))];
+                $cases[] = [\sprintf($expected, $case), \sprintf($input, $case)];
+                $cases[] = [\sprintf($expected, strtoupper($case)), \sprintf($input, strtoupper($case))];
+                if ($case !== strtolower($case)) {
+                    $cases[] = [\sprintf($expected, strtolower($case)), \sprintf($input, strtolower($case))];
+                }
             }
         }
 

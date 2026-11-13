@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,54 +14,90 @@
 
 namespace PhpCsFixer\Tests\Fixer\CastNotation;
 
+use PhpCsFixer\Fixer\CastNotation\LowercaseCastFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\CastNotation\LowercaseCastFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\CastNotation\LowercaseCastFixer>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(LowercaseCastFixer::class)]
 final class LowercaseCastFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: non-empty-string, 1?: non-empty-string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        $cases = [];
-        foreach (['boolean', 'bool', 'integer', 'int', 'double', 'float', 'real', 'float', 'string', 'array', 'object', 'unset', 'binary'] as $from) {
-            $cases[] =
-                [
-                    sprintf('<?php $b= (%s)$d;', $from),
-                    sprintf('<?php $b= (%s)$d;', strtoupper($from)),
-                ];
-            $cases[] =
-                [
-                    sprintf('<?php $b=( %s) $d;', $from),
-                    sprintf('<?php $b=( %s) $d;', ucfirst($from)),
-                ];
-            $cases[] =
-                [
-                    sprintf('<?php $b=(%s ) $d;', $from),
-                    sprintf('<?php $b=(%s ) $d;', strtoupper($from)),
-                ];
-            $cases[] =
-                [
-                    sprintf('<?php $b=(  %s  ) $d;', $from),
-                    sprintf('<?php $b=(  %s  ) $d;', ucfirst($from)),
-                ];
-        }
+        $types = ['boolean', 'bool', 'integer', 'int', 'double', 'float', 'string', 'array', 'object', 'binary'];
 
-        return $cases;
+        foreach ($types as $from) {
+            yield from self::createCasesFor($from);
+        }
+    }
+
+    /**
+     * @dataProvider provideFixPre80Cases
+     *
+     * @requires PHP < 8.0.0
+     */
+    #[DataProvider('provideFixPre80Cases')]
+    #[RequiresPhp('< 8.0.0')]
+    public function testFixPre80(string $expected, ?string $input = null): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<int, array{0: non-empty-string, 1?: non-empty-string}>
+     */
+    public static function provideFixPre80Cases(): iterable
+    {
+        yield from self::createCasesFor('unset');
+
+        yield from self::createCasesFor('real');
+    }
+
+    /**
+     * @return iterable<array{0: non-empty-string, 1?: non-empty-string}>
+     */
+    private static function createCasesFor(string $type): iterable
+    {
+        yield [
+            \sprintf('<?php $b= (%s)$d;', $type),
+            \sprintf('<?php $b= (%s)$d;', strtoupper($type)),
+        ];
+
+        yield [
+            \sprintf('<?php $b=( %s) $d;', $type),
+            \sprintf('<?php $b=( %s) $d;', ucfirst($type)),
+        ];
+
+        yield [
+            \sprintf('<?php $b=(%s ) $d;', $type),
+            \sprintf('<?php $b=(%s ) $d;', strtoupper($type)),
+        ];
+
+        yield [
+            \sprintf('<?php $b=(  %s  ) $d;', $type),
+            \sprintf('<?php $b=(  %s  ) $d;', ucfirst($type)),
+        ];
     }
 }

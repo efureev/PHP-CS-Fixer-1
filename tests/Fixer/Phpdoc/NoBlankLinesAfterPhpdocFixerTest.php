@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,340 +14,404 @@
 
 namespace PhpCsFixer\Tests\Fixer\Phpdoc;
 
+use PhpCsFixer\Fixer\Phpdoc\NoBlankLinesAfterPhpdocFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Graham Campbell <graham@alt-three.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Phpdoc\NoBlankLinesAfterPhpdocFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Phpdoc\NoBlankLinesAfterPhpdocFixer>
+ *
+ * @author Graham Campbell <hello@gjcampbell.co.uk>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NoBlankLinesAfterPhpdocFixer::class)]
 final class NoBlankLinesAfterPhpdocFixerTest extends AbstractFixerTestCase
 {
-    public function testSimpleExampleIsNotChanged()
-    {
-        $input = <<<'EOF'
-<?php
-
-/**
- * This is the bar class.
- */
-class Bar
-{
     /**
-     * @return void
+     * @dataProvider provideFixCases
      */
-    public function foo()
-    {
-        //
-    }
-}
-
-EOF;
-
-        $this->doTest($input);
-    }
-
-    public function testComplexExampleIsNotChanged()
-    {
-        $input = <<<'EOF'
-<?php
-/**
- * This is the hello function.
- * Yeh, this layout should be allowed.
- * We're fixing lines following a docblock.
- */
-function hello($foo) {}
-/**
- * This is the bar class.
- */
-final class Bar
-{
-    /**
-     * @return void
-     */
-    public static function foo()
-    {
-        //
-    }
-
-    /**
-     * @return void
-     */
-    static private function bar123() {}
-
-    /*
-     * This T_COMMENT should not be moved
-     *
-     * Only T_DOC_COMMENT should be moved
-     */
-    final protected
-    // mixin' it up a bit
-    function baz() {
-    }
-
-
-    /*
-     * This T_COMMENT should not be moved
-     *
-     * Only T_DOC_COMMENT should be moved
-     */
-
-    public function cool() {}
-
-    /**
-     * This is the first docblock
-     *
-     * Not removing blank line here.
-     * No element is being documented
-     */
-
-    /**
-     * Another docblock
-     */
-    public function silly() {}
-}
-
-EOF;
-
-        $this->doTest($input);
-    }
-
-    public function testCommentsAreNotChanged()
-    {
-        $input = <<<'EOF'
-<?php
-
-/*
- * This file is part of xyz.
- *
- * License etc...
- */
-
-namespace Foo\Bar;
-
-EOF;
-
-        $this->doTest($input);
-    }
-
-    public function testLineBeforeDeclareIsNotBeRemoved()
-    {
-        $expected = <<<'EOF'
-<?php
-/**
- * This is some license header.
- */
-
-declare(strict_types=1);
-EOF;
-
-        $this->doTest($expected);
-    }
-
-    public function testFixesSimpleClass()
-    {
-        $expected = <<<'EOF'
-<?php
-
-/**
- * This is the bar class.
- */
-class Bar {}
-
-EOF;
-
-        $input = <<<'EOF'
-<?php
-
-/**
- * This is the bar class.
- */
-
-
-class Bar {}
-
-EOF;
-
-        $this->doTest($expected, $input);
-    }
-
-    public function testFixesIndentedClass()
-    {
-        $expected = <<<'EOF'
-<?php
-
-    /**
-     *
-     */
-    class Foo {
-        private $a;
-    }
-
-EOF;
-
-        $input = <<<'EOF'
-<?php
-
-    /**
-     *
-     */
-
-    class Foo {
-        private $a;
-    }
-
-EOF;
-
-        $this->doTest($expected, $input);
-    }
-
-    public function testFixesOthers()
-    {
-        $expected = <<<'EOF'
-<?php
-
-    /**
-     * Constant!
-     */
-    const test = 'constant';
-
-    /**
-     * Foo!
-     */
-    $foo = 123;
-
-EOF;
-
-        $input = <<<'EOF'
-<?php
-
-    /**
-     * Constant!
-     */
-
-
-    const test = 'constant';
-
-    /**
-     * Foo!
-     */
-
-    $foo = 123;
-
-EOF;
-
-        $this->doTest($expected, $input);
-    }
-
-    public function testFixesWindowsStyle()
-    {
-        $expected = "<?php\r\n    /**     * Constant!     */\n    \$foo = 123;";
-
-        $input = "<?php\r\n    /**     * Constant!     */\r\n\r\n\r\n    \$foo = 123;";
-
-        $this->doTest($expected, $input);
-    }
-
-    /**
-     * Empty line between typehinting docs and return statement should be preserved.
-     *
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideInlineTypehintingDocsBeforeFlowBreakCases
-     */
-    public function testInlineTypehintingDocsBeforeFlowBreak($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideInlineTypehintingDocsBeforeFlowBreakCases()
+    /**
+     * @return iterable<string, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        $cases = [];
+        yield 'simple example is not changed' => [<<<'EOF'
+            <?php
 
-        $cases[] = [<<<'EOF'
-<?php
-function parseTag($tag)
-{
-    $tagClass = get_class($tag);
+            /**
+             * This is the bar class.
+             */
+            class Bar
+            {
+                /**
+                 * @return void
+                 */
+                public function foo()
+                {
+                    //
+                }
+            }
 
-    if ('phpDocumentor\Reflection\DocBlock\Tag\VarTag' === $tagClass) {
-        /** @var DocBlock\Tag\VarTag $tag */
+            EOF];
 
-        return $tag->getDescription();
-    }
-}
-EOF
+        yield 'complex example is not changed' => [<<<'EOF'
+            <?php
+            /**
+             * This is the hello function.
+             * Yeh, this layout should be allowed.
+             * We're fixing lines following a docblock.
+             */
+            function hello($foo) {}
+            /**
+             * This is the bar class.
+             */
+            final class Bar
+            {
+                /**
+                 * @return void
+                 */
+                public static function foo()
+                {
+                    //
+                }
+
+                /**
+                 * @return void
+                 */
+                static private function bar123() {}
+
+                /*
+                 * This T_COMMENT should not be moved
+                 *
+                 * Only T_DOC_COMMENT should be moved
+                 */
+                final protected
+                // mixin' it up a bit
+                function baz() {
+                }
+
+
+                /*
+                 * This T_COMMENT should not be moved
+                 *
+                 * Only T_DOC_COMMENT should be moved
+                 */
+
+                public function cool() {}
+
+                /**
+                 * This is the first docblock
+                 *
+                 * Not removing blank line here.
+                 * No element is being documented
+                 */
+
+                /**
+                 * Another docblock
+                 */
+                public function silly() {}
+            }
+
+            EOF];
+
+        yield 'comments are not changed' => [<<<'EOF'
+            <?php
+
+            /*
+             * This file is part of xyz.
+             *
+             * License etc...
+             */
+
+            namespace Foo\Bar;
+
+            EOF];
+
+        yield 'line before declare is not removed' => [<<<'EOF'
+            <?php
+            /**
+             * This is some license header.
+             */
+
+            declare(strict_types=1);
+            EOF];
+
+        yield 'line before use statement is not removed' => [<<<'EOF'
+            <?php
+            /**
+             * This is some license header.
+             */
+
+            use Foo\Bar;
+            EOF];
+
+        yield 'line before include is not removed' => [
+            <<<'EOF'
+                <?php
+                /**
+                 * This describes what my script does.
+                 */
+
+                include 'vendor/autoload.php';
+                EOF,
         ];
 
-        $cases[] = [<<<'EOF'
-<?php
-function parseTag($tag)
-{
-    $tagClass = get_class($tag);
+        yield 'line before include_once is not removed' => [
+            <<<'EOF'
+                <?php
+                /**
+                 * This describes what my script does.
+                 */
 
-    if ('phpDocumentor\Reflection\DocBlock\Tag\VarTag' === $tagClass) {
-        /** @var DocBlock\Tag\VarTag $tag */
-
-        throw new Exception($tag->getDescription());
-    }
-}
-EOF
+                include_once 'vendor/autoload.php';
+                EOF,
         ];
 
-        $cases[] = [<<<'EOF'
-<?php
-function parseTag($tag)
-{
-    $tagClass = get_class($tag);
+        yield 'line before require is not removed' => [
+            <<<'EOF'
+                <?php
+                /**
+                 * This describes what my script does.
+                 */
 
-    if ('phpDocumentor\Reflection\DocBlock\Tag\VarTag' === $tagClass) {
-        /** @var DocBlock\Tag\VarTag $tag */
-
-        goto FOO;
-    }
-
-FOO:
-}
-EOF
+                require 'vendor/autoload.php';
+                EOF,
         ];
 
-        $cases[] = [<<<'EOF'
-<?php
-function parseTag($tag)
-{
-    while (true) {
-        $tagClass = get_class($tag);
+        yield 'line before require_once is not removed' => [
+            <<<'EOF'
+                <?php
+                /**
+                 * This describes what my script does.
+                 */
 
-        if ('phpDocumentor\Reflection\DocBlock\Tag\VarTag' === $tagClass) {
-            /** @var DocBlock\Tag\VarTag $tag */
-
-            continue;
-        }
-    }
-}
-EOF
+                require_once 'vendor/autoload.php';
+                EOF,
         ];
 
-        $cases[] = [<<<'EOF'
-<?php
-function parseTag($tag)
-{
-    while (true) {
-        $tagClass = get_class($tag);
-
-        if ('phpDocumentor\Reflection\DocBlock\Tag\VarTag' === $tagClass) {
-            /** @var DocBlock\Tag\VarTag $tag */
-
-            break;
-        }
-    }
-}
-EOF
+        yield 'line with spaces is removed When next token is indented' => [
+            '<?php
+                /**
+                 * PHPDoc with a line with space
+                 */
+                class Foo {}',
+            '<?php
+                /**
+                 * PHPDoc with a line with space
+                 */
+                '.'
+                class Foo {}',
         ];
 
-        return $cases;
+        yield 'line With spaces is removed when next token is not indented' => [
+            '<?php
+    /**
+     * PHPDoc with a line with space
+     */
+class Foo {}',
+            '<?php
+    /**
+     * PHPDoc with a line with space
+     */
+    '.'
+class Foo {}',
+        ];
+
+        yield 'simple class' => [
+            <<<'EOF'
+                <?php
+
+                /**
+                 * This is the bar class.
+                 */
+                class Bar {}
+
+                EOF,
+            <<<'EOF'
+                <?php
+
+                /**
+                 * This is the bar class.
+                 */
+
+
+                class Bar {}
+
+                EOF,
+        ];
+
+        yield 'indented class' => [
+            <<<'EOF'
+                <?php
+
+                    /**
+                     *
+                     */
+                    class Foo {
+                        private $a;
+                    }
+
+                EOF,
+            <<<'EOF'
+                <?php
+
+                    /**
+                     *
+                     */
+
+                    class Foo {
+                        private $a;
+                    }
+
+                EOF,
+        ];
+
+        yield 'others' => [
+            <<<'EOF'
+                <?php
+
+                    /**
+                     * Constant!
+                     */
+                    const test = 'constant';
+
+                    /**
+                     * Foo!
+                     */
+                    $foo = 123;
+
+                EOF,
+            <<<'EOF'
+                <?php
+
+                    /**
+                     * Constant!
+                     */
+
+
+                    const test = 'constant';
+
+                    /**
+                     * Foo!
+                     */
+
+                    $foo = 123;
+
+                EOF,
+        ];
+
+        yield 'whitespace in docblock above namespace is not touched' => [<<<'EOF'
+            <?php
+
+            /**
+             * This is a file-level docblock.
+             */
+
+            namespace Foo\Bar\Baz;
+
+            EOF];
+
+        yield 'windows style' => [
+            "<?php\r\n    /**     * Constant!     */\n    \$foo = 123;",
+            "<?php\r\n    /**     * Constant!     */\r\n\r\n\r\n    \$foo = 123;",
+        ];
+
+        yield 'inline typehinting docs before flow break 1' => [
+            <<<'EOF'
+                <?php
+                function parseTag($tag)
+                {
+                    $tagClass = get_class($tag);
+
+                    if ('phpDocumentor\Reflection\DocBlock\Tag\VarTag' === $tagClass) {
+                        /** @var DocBlock\Tag\VarTag $tag */
+
+                        return $tag->getDescription();
+                    }
+                }
+                EOF,
+        ];
+
+        yield 'inline typehinting docs before flow break 2' => [
+            <<<'EOF'
+                <?php
+                function parseTag($tag)
+                {
+                    $tagClass = get_class($tag);
+
+                    if ('phpDocumentor\Reflection\DocBlock\Tag\VarTag' === $tagClass) {
+                        /** @var DocBlock\Tag\VarTag $tag */
+
+                        throw new Exception($tag->getDescription());
+                    }
+                }
+                EOF,
+        ];
+
+        yield 'inline typehinting docs before flow break 3' => [
+            <<<'EOF'
+                <?php
+                function parseTag($tag)
+                {
+                    $tagClass = get_class($tag);
+
+                    if ('phpDocumentor\Reflection\DocBlock\Tag\VarTag' === $tagClass) {
+                        /** @var DocBlock\Tag\VarTag $tag */
+
+                        goto FOO;
+                    }
+
+                FOO:
+                }
+                EOF,
+        ];
+
+        yield 'inline typehinting docs before flow break 4' => [
+            <<<'EOF'
+                <?php
+                function parseTag($tag)
+                {
+                    while (true) {
+                        $tagClass = get_class($tag);
+
+                        if ('phpDocumentor\Reflection\DocBlock\Tag\VarTag' === $tagClass) {
+                            /** @var DocBlock\Tag\VarTag $tag */
+
+                            continue;
+                        }
+                    }
+                }
+                EOF,
+        ];
+
+        yield 'inline typehinting docs before flow break 5' => [
+            <<<'EOF'
+                <?php
+                function parseTag($tag)
+                {
+                    while (true) {
+                        $tagClass = get_class($tag);
+
+                        if ('phpDocumentor\Reflection\DocBlock\Tag\VarTag' === $tagClass) {
+                            /** @var DocBlock\Tag\VarTag $tag */
+
+                            break;
+                        }
+                    }
+                }
+                EOF,
+        ];
     }
 }

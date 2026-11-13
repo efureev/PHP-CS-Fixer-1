@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,177 +14,186 @@
 
 namespace PhpCsFixer\Tests\Fixer\Comment;
 
+use PhpCsFixer\Fixer\Comment\NoEmptyCommentFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
 use PhpCsFixer\Tokenizer\Tokens;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Comment\NoEmptyCommentFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Comment\NoEmptyCommentFixer>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NoEmptyCommentFixer::class)]
 final class NoEmptyCommentFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            // fix cases
-            [
-                '<?php
+        // fix cases
+        yield [
+            '<?php
                     echo 0;
 echo 1;
                 ',
-                '<?php
+            '<?php
                     echo 0;//
 echo 1;
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     echo 0;
     echo 1;
                 ',
-                '<?php
+            '<?php
                     echo 0;//
     echo 1;
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     echo 1;
                 ',
-                '<?php
+            '<?php
                     echo 1;//
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 echo 2;
                     '.'
 echo 1;
                 ',
-                '<?php
+            '<?php
                 echo 2;
                     //
 echo 1;
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
                 ?>',
-                '<?php
+            '<?php
 
                 //?>',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     '.'
                 ',
-                '<?php
+            '<?php
                     //
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     '.'
                 ',
-                '<?php
+            '<?php
                     #
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     '.'
                 ',
-                '<?php
+            '<?php
                     /**/
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     echo 0;echo 1;
                 ',
-                '<?php
+            '<?php
                     echo 0;/**/echo 1;
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     echo 0;echo 1;
                 ',
-                '<?php
+            '<?php
                     echo 0;/**//**//**/echo 1/**/;
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 ',
-                '<?php
+            '<?php
                 //',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 ',
-                '<?php
+            '<?php
                 /*
 
 
                 */',
-            ],
-            [
-                '<?php
-                    '.'
-                    '.'
-                    '.'
-                    '.'
-                ',
-                '<?php
-                    //
-                    //
-                    //
-                    /**///
-                ',
-            ],
-            [
-                "<?php\n                    \n                    \n                    \n                    \n                ",
-                "<?php\n                    //\n                    //\n                    //\n                    /**///\n                ",
-            ],
-            [
-                "<?php\r                    \r                    \r                    \r                    \r                ",
-                "<?php\r                    //\r                    //\r                    //\r                    /**///\r                ",
-            ],
-            [
-                "<?php\r\n                    \r\n                    \r\n                    \r\n                    \r\n                ",
-                "<?php\r\n                    //\r\n                    //\r\n                    //\r\n                    /**///\r\n                ",
-            ],
-            [
-                "<?php\necho 1;\r\recho 2;",
-                "<?php\necho 1;\r//\recho 2;",
-            ],
-            // do not fix cases
-            [
-                '<?php
+        ];
+
+        yield [
+            "<?php\n                    \n                    \n                    \n                    \n                ",
+            "<?php\n                    //\n                    //\n                    //\n                    /**///\n                ",
+        ];
+
+        yield [
+            "<?php\r                    \r                    \r                    \r                    \r                ",
+            "<?php\r                    //\r                    //\r                    //\r                    /**///\r                ",
+        ];
+
+        yield [
+            "<?php\r\n                    \r\n                    \r\n                    \r\n                    \r\n                ",
+            "<?php\r\n                    //\r\n                    //\r\n                    //\r\n                    /**///\r\n                ",
+        ];
+
+        yield [
+            "<?php\necho 1;\r\recho 2;",
+            "<?php\necho 1;\r//\recho 2;",
+        ];
+
+        // do not fix cases
+        yield [
+            '<?php
                 // a
             // /**/
               // #
 /* b */ // s
           #                        c',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     // This comment could be nicely formatted.
                     //
                     //
@@ -211,7 +222,46 @@ echo 1;
 
                     $bar = 2;
                 ',
-            ],
+        ];
+
+        yield [
+            '<?php
+                    '.'
+                ',
+            '<?php
+                    /*
+                     *
+                     */
+                ',
+        ];
+
+        yield [
+            '<?php
+                    '.'
+                ',
+            '<?php
+                    /********
+                     *
+                     ********/
+                ',
+        ];
+
+        yield [
+            '<?php /* a */',
+            '<?php /* *//* a *//* */',
+        ];
+
+        yield [
+            '<?php
+                    '.'
+                    /* a */
+                    '.'
+                ',
+            '<?php
+                    //
+                    /* a */
+                    //
+                ',
         ];
     }
 
@@ -221,125 +271,134 @@ echo 1;
      * @param int    $endIndex   expected index of the last token of the block
      * @param bool   $isEmpty    expected value of empty flag returned
      *
-     * @dataProvider provideCommentBlockCases
+     * @dataProvider provideGetCommentBlockCases
      */
-    public function testGetCommentBlock($source, $startIndex, $endIndex, $isEmpty)
+    #[DataProvider('provideGetCommentBlockCases')]
+    public function testGetCommentBlock(string $source, int $startIndex, int $endIndex, bool $isEmpty): void
     {
         Tokens::clearCache();
         $tokens = Tokens::fromCode($source);
-        $this->assertTrue($tokens[$startIndex]->isComment(), sprintf('Misconfiguration of test, expected comment token at index "%d".', $startIndex));
+        self::assertTrue($tokens[$startIndex]->isComment(), \sprintf('Misconfiguration of test, expected comment token at index "%d".', $startIndex));
 
-        $method = new \ReflectionMethod($this->fixer, 'getCommentBlock');
-        $method->setAccessible(true);
+        $foundInfo = \Closure::bind(static fn (NoEmptyCommentFixer $fixer): array => $fixer->getCommentBlock($tokens, $startIndex), null, NoEmptyCommentFixer::class)($this->fixer);
 
-        list($foundStart, $foundEnd, $foundIsEmpty) = $method->invoke($this->fixer, $tokens, $startIndex);
-
-        $this->assertSame($startIndex, $foundStart, 'Find start index of block failed.');
-        $this->assertSame($endIndex, $foundEnd, 'Find end index of block failed.');
-        $this->assertSame($isEmpty, $foundIsEmpty, 'Is empty comment block detection failed.');
+        self::assertSame($startIndex, $foundInfo['blockStart'], 'Find start index of block failed.');
+        self::assertSame($endIndex, $foundInfo['blockEnd'], 'Find end index of block failed.');
+        self::assertSame($isEmpty, $foundInfo['isEmpty'], 'Is empty comment block detection failed.');
     }
 
-    public function provideCommentBlockCases()
+    /**
+     * @return iterable<int, array{string, int, int, bool}>
+     */
+    public static function provideGetCommentBlockCases(): iterable
     {
-        $cases = [
-            [
-                '<?php // a',
-                1,
-                1,
-                false,
-            ],
-            [
-                '<?php
+        yield [
+            '<?php // a',
+            1,
+            1,
+            false,
+        ];
+
+        yield [
+            '<?php
                     // This comment could be nicely formatted.
                     //
                     //
                     // For that, it could have some empty comment lines inside.
                     //           ',
-                2,
-                11,
-                false,
-            ],
-            [
-                '<?php
+            2,
+            11,
+            false,
+        ];
+
+        yield [
+            '<?php
 /**///',
-                1,
-                1,
-                true,
-            ],
-            [
-                '<?php
+            1,
+            1,
+            true,
+        ];
+
+        yield [
+            '<?php
 //
 //
 
 #
 #
 ',
-                5,
-                8,
-                true,
-            ],
-            [
-                '<?php
+            5,
+            8,
+            true,
+        ];
+
+        yield [
+            '<?php
 //
 //
 
 //
 //
 ',
-                5,
-                8,
-                true,
-            ],
-            [
-                '<?php
+            5,
+            8,
+            true,
+        ];
+
+        yield [
+            '<?php
 //
 //
 
 //
 //
 ',
-                1,
-                3,
-                true,
-            ],
-            [
-                str_replace("\n", "\r", "<?php\n//\n//\n\n//\n//\n"),
-                1,
-                3,
-                true,
-            ],
-            [
-                str_replace("\n", "\r\n", "<?php\n//\n//\n\n//\n//\n"),
-                1,
-                3,
-                true,
-            ],
-            [
-                '<?php
+            1,
+            3,
+            true,
+        ];
+
+        yield [
+            str_replace("\n", "\r", "<?php\n//\n//\n\n//\n//\n"),
+            1,
+            3,
+            true,
+        ];
+
+        yield [
+            str_replace("\n", "\r\n", "<?php\n//\n//\n\n//\n//\n"),
+            1,
+            3,
+            true,
+        ];
+
+        yield [
+            '<?php
 //
 
 //
 ',
-                1,
-                1,
-                true,
-            ],
-            [
-                '<?php
+            1,
+            1,
+            true,
+        ];
+
+        yield [
+            '<?php
 //
 //
               $a;  ',
-                1,
-                4,
-                true,
-            ],
-            [
-                '<?php
+            1,
+            4,
+            true,
+        ];
+
+        yield [
+            '<?php
 //',
-                1,
-                1,
-                true,
-            ],
+            1,
+            1,
+            true,
         ];
 
         $src = '<?php
@@ -350,13 +409,13 @@ echo 1;
           #                        c12';
 
         foreach ([2, 4, 6] as $i) {
-            $cases[] = [$src, $i, 7, false];
+            yield [$src, $i, 7, false];
         }
 
-        $cases[] = [$src, 8, 9, false];
-        $cases[] = [$src, 10, 11, false];
-        $cases[] = [$src, 12, 12, false];
+        yield [$src, 8, 8, false];
 
-        return $cases;
+        yield [$src, 10, 11, false];
+
+        yield [$src, 12, 12, false];
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,6 +16,7 @@ namespace PhpCsFixer\Tests\Linter;
 
 use PhpCsFixer\Linter\UnavailableLinterException;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @author Andreas Möller <am@localheinz.com>
@@ -21,30 +24,26 @@ use PhpCsFixer\Tests\TestCase;
  * @internal
  *
  * @covers \PhpCsFixer\Linter\UnavailableLinterException
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(UnavailableLinterException::class)]
 final class UnavailableLinterExceptionTest extends TestCase
 {
-    public function testIsRuntimeException()
-    {
-        $exception = new UnavailableLinterException();
-
-        $this->assertInstanceOf(\RuntimeException::class, $exception);
-    }
-
-    public function testConstructorSetsValues()
+    public function testConstructorSetsValues(): void
     {
         $message = 'Never heard of that one, sorry!';
-        $code = 9001;
+        $code = 9_001;
         $previous = new \RuntimeException();
 
         $exception = new UnavailableLinterException(
             $message,
             $code,
-            $previous
+            $previous,
         );
 
-        $this->assertSame($message, $exception->getMessage());
-        $this->assertSame($code, $exception->getCode());
-        $this->assertSame($previous, $exception->getPrevious());
+        self::assertSame($message, $exception->getMessage());
+        self::assertSame($code, $exception->getCode());
+        self::assertSame($previous, $exception->getPrevious());
     }
 }

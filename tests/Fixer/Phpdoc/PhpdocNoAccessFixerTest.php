@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,73 +14,84 @@
 
 namespace PhpCsFixer\Tests\Fixer\Phpdoc;
 
+use PhpCsFixer\Fixer\Phpdoc\PhpdocNoAccessFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Graham Campbell <graham@alt-three.com>
- *
  * @internal
  *
- * @covers \PhpCsFixer\AbstractProxyFixer
  * @covers \PhpCsFixer\Fixer\Phpdoc\PhpdocNoAccessFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Phpdoc\PhpdocNoAccessFixer>
+ *
+ * @author Graham Campbell <hello@gjcampbell.co.uk>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(PhpdocNoAccessFixer::class)]
 final class PhpdocNoAccessFixerTest extends AbstractFixerTestCase
 {
-    public function testFixAccess()
+    /**
+     * @dataProvider provideFixCases
+     */
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
-        $expected = <<<'EOF'
-<?php
-    /**
-     */
-
-EOF;
-
-        $input = <<<'EOF'
-<?php
-    /**
-     * @access public
-     */
-
-EOF;
-
         $this->doTest($expected, $input);
     }
 
-    public function testFixMany()
-    {
-        $expected = <<<'EOF'
-<?php
-/**
- * Hello!
- * @notaccess bar
- */
-
-EOF;
-
-        $input = <<<'EOF'
-<?php
-/**
- * Hello!
- * @access private
- * @notaccess bar
- * @access foo
- */
-
-EOF;
-
-        $this->doTest($expected, $input);
-    }
-
-    public function testDoNothing()
-    {
-        $expected = <<<'EOF'
-<?php
     /**
-     * @var access
+     * @return iterable<string, array{0: string, 1?: string}>
      */
+    public static function provideFixCases(): iterable
+    {
+        yield 'access' => [
+            <<<'PHP'
+                <?php
+                    /**
+                     */
 
-EOF;
+                PHP,
+            <<<'PHP'
+                <?php
+                    /**
+                     * @access public
+                     */
 
-        $this->doTest($expected);
+                PHP,
+        ];
+
+        yield 'many' => [
+            <<<'PHP'
+                <?php
+                /**
+                 * Hello!
+                 * @notaccess bar
+                 */
+
+                PHP,
+            <<<'PHP'
+                <?php
+                /**
+                 * Hello!
+                 * @access private
+                 * @notaccess bar
+                 * @access foo
+                 */
+
+                PHP,
+        ];
+
+        yield 'do nothing' => [
+            <<<'PHP'
+                <?php
+                    /**
+                     * @var access
+                     */
+
+                PHP,
+        ];
     }
 }

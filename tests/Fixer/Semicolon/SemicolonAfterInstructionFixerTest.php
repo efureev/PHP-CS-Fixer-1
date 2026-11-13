@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,84 +14,120 @@
 
 namespace PhpCsFixer\Tests\Fixer\Semicolon;
 
+use PhpCsFixer\Fixer\Semicolon\SemicolonAfterInstructionFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Semicolon\SemicolonAfterInstructionFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Semicolon\SemicolonAfterInstructionFixer>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(SemicolonAfterInstructionFixer::class)]
 final class SemicolonAfterInstructionFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php $a = [1,2,3]; echo $a{1}; ?>',
-                '<?php $a = [1,2,3]; echo $a{1} ?>',
-            ],
-            [
-                '<?php $a++;//a ?>',
-                '<?php $a++//a ?>',
-            ],
-            [
-                '<?php $b++; /**/ ?>',
-                '<?php $b++ /**/ ?>',
-            ],
-            [
-                '<?php echo 123; ?>',
-                '<?php echo 123 ?>',
-            ],
-            [
-                "<?php echo 123;\n\t?>",
-                "<?php echo 123\n\t?>",
-            ],
-            ['<?php ?>'],
-            ['<?php if($a){}'],
-            ['<?php while($a > $b){}'],
-            [
-                '<?php if ($a == 5): ?>
+        yield 'comment' => [
+            '<?php $a++;//a ?>',
+            '<?php $a++//a ?>',
+        ];
+
+        yield 'comment II' => [
+            '<?php $b++; /**/ ?>',
+            '<?php $b++ /**/ ?>',
+        ];
+
+        yield 'no space' => [
+            '<?php $b++;?>',
+            '<?php $b++?>',
+        ];
+
+        yield [
+            '<?php echo 123; ?>',
+            '<?php echo 123 ?>',
+        ];
+
+        yield [
+            "<?php echo 123;\n\t?>",
+            "<?php echo 123\n\t?>",
+        ];
+
+        yield ['<?php ?>'];
+
+        yield ['<?php ; ?>'];
+
+        yield ['<?php if($a){}'];
+
+        yield ['<?php while($a > $b){}'];
+
+        yield [
+            '<?php if ($a == 5): ?>
 A is equal to 5
 <?php endif; ?>
 <?php switch ($foo): ?>
 <?php case 1: ?>
 ...
 <?php endswitch; ?>',
-                '<?php if ($a == 5): ?>
+            '<?php if ($a == 5): ?>
 A is equal to 5
 <?php endif; ?>
 <?php switch ($foo): ?>
 <?php case 1: ?>
 ...
 <?php endswitch ?>',
-            ],
-            [
-                '<?php if ($a == 5) { ?>
+        ];
+
+        yield [
+            '<?php if ($a == 5) { ?>
 A is equal to 5
 <?php } ?>',
-            ],
+        ];
+
+        yield 'open tag with echo' => [
+            "<?= '1_'; ?> <?php ?><?= 1; ?>",
+            "<?= '1_' ?> <?php ?><?= 1; ?>",
         ];
     }
 
-    public function testOpenWithEcho()
+    /**
+     * @dataProvider provideFixPre80Cases
+     *
+     * @requires PHP < 8.0.0
+     */
+    #[DataProvider('provideFixPre80Cases')]
+    #[RequiresPhp('< 8.0.0')]
+    public function testFixPre80(string $expected, ?string $input = null): void
     {
-        if (!ini_get('short_open_tag')) {
-            $this->markTestSkipped('The short_open_tag option is required to be enabled.');
-        }
+        $this->doTest($expected, $input);
+    }
 
-        $this->doTest("<?= '1_'; ?>", "<?= '1_' ?>");
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideFixPre80Cases(): iterable
+    {
+        yield [
+            '<?php $a = [1,2,3]; echo $a{1}; ?>',
+            '<?php $a = [1,2,3]; echo $a{1} ?>',
+        ];
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,101 +14,120 @@
 
 namespace PhpCsFixer\Tests\Fixer\Comment;
 
+use PhpCsFixer\Fixer\Comment\MultilineCommentOpeningClosingFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Filippo Tessarotto <zoeslam@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Comment\MultilineCommentOpeningClosingFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Comment\MultilineCommentOpeningClosingFixer>
+ *
+ * @author Filippo Tessarotto <zoeslam@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(MultilineCommentOpeningClosingFixer::class)]
 final class MultilineCommentOpeningClosingFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideDocblocksCases
+     * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideDocblocksCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            ['<?php /** Opening DocBlock */'],
-            [
-                '<?php /* Opening Multiline comment */',
-                '<?php /*** Opening Multiline comment */',
-            ],
-            [
-                '<?php /*\ Opening false-DocBlock */',
-                '<?php /**\ Opening false-DocBlock */',
-            ],
-            [
-                '<?php /** Closing DocBlock */',
-                '<?php /** Closing DocBlock ***/',
-            ],
-            [
-                '<?php /* Closing Multiline comment */',
-                '<?php /* Closing Multiline comment ***/',
-            ],
-            [
-                <<<'EOT'
-<?php
+        yield ['<?php /** Opening DocBlock */'];
 
-/*
- * WUT
- */
-EOT
-                ,
-                <<<'EOT'
-<?php
+        yield [
+            '<?php /* Opening comment */',
+            '<?php /*** Opening comment */',
+        ];
 
-/********
- * WUT
- ********/
-EOT
-                ,
-            ],
-            [
-                <<<'EOT'
-<?php
+        yield [
+            '<?php /*\ Opening false-DocBlock */',
+            '<?php /**\ Opening false-DocBlock */',
+        ];
 
-/*\
- * False DocBlock
- */
-EOT
-                ,
-                <<<'EOT'
-<?php
+        yield [
+            '<?php /** Closing DocBlock */',
+            '<?php /** Closing DocBlock ***/',
+        ];
 
-/**\
- * False DocBlock
- */
-EOT
-                ,
-            ],
-            [
-                <<<'EOT'
-<?php
-# Hash
-#*** Hash asterisk
-// Slash
-//*** Slash asterisk
+        yield [
+            '<?php /* Closing comment */',
+            '<?php /* Closing comment ***/',
+        ];
 
-/*
-/**
-/***
-Weird multiline comment
-*/
+        yield [
+            '<?php /**/',
+            '<?php /***/',
+        ];
 
-EOT
-                ,
-            ],
+        yield [
+            '<?php /**/',
+            '<?php /********/',
+        ];
+
+        yield [
+            <<<'EOT'
+                <?php
+
+                /*
+                 * WUT
+                 */
+                EOT,
+            <<<'EOT'
+                <?php
+
+                /********
+                 * WUT
+                 ********/
+                EOT,
+        ];
+
+        yield [
+            <<<'EOT'
+                <?php
+
+                /*\
+                 * False DocBlock
+                 */
+                EOT,
+            <<<'EOT'
+                <?php
+
+                /**\
+                 * False DocBlock
+                 */
+                EOT,
+        ];
+
+        yield [
+            <<<'EOT'
+                <?php
+                # Hash
+                #*** Hash asterisk
+                // Slash
+                //*** Slash asterisk
+
+                /*
+                /**
+                /***
+                Weird multiline comment
+                */
+
+                EOT,
         ];
     }
 }

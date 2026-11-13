@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -15,39 +17,32 @@ namespace PhpCsFixer\Fixer\FunctionNotation;
 use PhpCsFixer\AbstractFopenFlagFixer;
 use PhpCsFixer\FixerDefinition\CodeSample;
 use PhpCsFixer\FixerDefinition\FixerDefinition;
+use PhpCsFixer\FixerDefinition\FixerDefinitionInterface;
 use PhpCsFixer\Preg;
 use PhpCsFixer\Tokenizer\Token;
 use PhpCsFixer\Tokenizer\Tokens;
 
 /**
- * @author SpacePossum
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class FopenFlagOrderFixer extends AbstractFopenFlagFixer
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function getDefinition()
+    public function getDefinition(): FixerDefinitionInterface
     {
         return new FixerDefinition(
             'Order the flags in `fopen` calls, `b` and `t` must be last.',
             [new CodeSample("<?php\n\$a = fopen(\$foo, 'br+');\n")],
             null,
-            'Risky when the function `fopen` is overridden.'
+            'Risky when the function `fopen` is overridden.',
         );
     }
 
-    /**
-     * @param Tokens $tokens
-     * @param int    $argumentStartIndex
-     * @param int    $argumentEndIndex
-     */
-    protected function fixFopenFlagToken(Tokens $tokens, $argumentStartIndex, $argumentEndIndex)
+    protected function fixFopenFlagToken(Tokens $tokens, int $argumentStartIndex, int $argumentEndIndex): void
     {
         $argumentFlagIndex = null;
 
         for ($i = $argumentStartIndex; $i <= $argumentEndIndex; ++$i) {
-            if ($tokens[$i]->isGivenKind([T_WHITESPACE, T_COMMENT, T_DOC_COMMENT])) {
+            if ($tokens[$i]->isGivenKind([\T_WHITESPACE, \T_COMMENT, \T_DOC_COMMENT])) {
                 continue;
             }
 
@@ -59,7 +54,7 @@ final class FopenFlagOrderFixer extends AbstractFopenFlagFixer
         }
 
         // check if second argument is candidate
-        if (null === $argumentFlagIndex || !$tokens[$argumentFlagIndex]->isGivenKind(T_CONSTANT_ENCAPSED_STRING)) {
+        if (null === $argumentFlagIndex || !$tokens[$argumentFlagIndex]->isGivenKind(\T_CONSTANT_ENCAPSED_STRING)) {
             return;
         }
 
@@ -76,28 +71,32 @@ final class FopenFlagOrderFixer extends AbstractFopenFlagFixer
         }
 
         $modeLength = \strlen($mode);
-        if ($modeLength < 2 || $modeLength > 13) { // 13 === length 'r+w+a+x+c+etb'
-            return; // sanity check to be less risky
+        if ($modeLength < 2) {
+            return; // nothing to sort
         }
 
-        $split = $this->sortFlags(Preg::split('#([^\+]\+?)#', $mode, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE));
+        if (false === $this->isValidModeString($mode)) {
+            return;
+        }
+
+        $split = $this->sortFlags(Preg::split('#([^\+]\+?)#', $mode, -1, \PREG_SPLIT_NO_EMPTY | \PREG_SPLIT_DELIM_CAPTURE));
         $newContent = $binPrefix.$contentQuote.implode('', $split).$contentQuote;
 
         if ($content !== $newContent) {
-            $tokens[$argumentFlagIndex] = new Token([T_CONSTANT_ENCAPSED_STRING, $newContent]);
+            $tokens[$argumentFlagIndex] = new Token([\T_CONSTANT_ENCAPSED_STRING, $newContent]);
         }
     }
 
     /**
-     * @param string[] $flags
+     * @param list<string> $flags
      *
-     * @return string[]
+     * @return list<string>
      */
-    private function sortFlags(array $flags)
+    private function sortFlags(array $flags): array
     {
         usort(
             $flags,
-            static function ($flag1, $flag2) {
+            static function (string $flag1, string $flag2): int {
                 if ($flag1 === $flag2) {
                     return 0;
                 }
@@ -119,7 +118,7 @@ final class FopenFlagOrderFixer extends AbstractFopenFlagFixer
                 }
 
                 return $flag1 < $flag2 ? -1 : 1;
-            }
+            },
         );
 
         return $flags;

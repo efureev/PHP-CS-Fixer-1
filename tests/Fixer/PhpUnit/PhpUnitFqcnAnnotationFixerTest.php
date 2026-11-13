@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,54 +14,101 @@
 
 namespace PhpCsFixer\Tests\Fixer\PhpUnit;
 
+use PhpCsFixer\Fixer\PhpUnit\PhpUnitFqcnAnnotationFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Roland Franssen <franssen.roland@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\PhpUnit\PhpUnitFqcnAnnotationFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\PhpUnit\PhpUnitFqcnAnnotationFixer>
+ *
+ * @author Roland Franssen <franssen.roland@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(PhpUnitFqcnAnnotationFixer::class)]
 final class PhpUnitFqcnAnnotationFixerTest extends AbstractFixerTestCase
 {
-    public function testFix()
+    /**
+     * @dataProvider provideFixCases
+     */
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * @ExpectedException Value
-     * @expectedException \X
-     * @expectedException
-     * @expectedException \Exception
-         * @expectedException \Some\Exception\ClassName
- * @expectedExceptionCode 123
-     * @expectedExceptionMessage Foo bar
-     *
-     * @covers \Foo
-     * @covers ::fooMethod
-     * @coversDefaultClass \Bar
-     * @uses \Baz
-     */
-EOF;
-        $input = <<<'EOF'
-<?php
-    /**
-     * @ExpectedException Value
-     * @expectedException X
-     * @expectedException
-     * @expectedException \Exception
-         * @expectedException Some\Exception\ClassName
- * @expectedExceptionCode 123
-     * @expectedExceptionMessage Foo bar
-     *
-     * @covers Foo
-     * @covers ::fooMethod
-     * @coversDefaultClass Bar
-     * @uses Baz
-     */
-EOF;
-
         $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
+    {
+        yield [
+            <<<'EOF'
+                <?php
+                /**
+                 * @covers \Foo
+                 * @covers ::fooMethod
+                 * @coversDefaultClass \Bar
+                 */
+                class FooTest extends TestCase {
+                    /**
+                     * @ExpectedException Value
+                     * @expectedException \X
+                     * @expectedException
+                     * @expectedException \Exception
+                         * @expectedException \Some\Exception\ClassName
+                 * @expectedExceptionCode 123
+                     * @expectedExceptionMessage Foo bar
+                     *
+                     * @uses \Baz
+                     * @uses \selfieGenerator
+                     * @uses self::someFunction
+                     * @uses static::someOtherFunction
+                     */
+                }
+                EOF,
+            <<<'EOF'
+                <?php
+                /**
+                 * @covers Foo
+                 * @covers ::fooMethod
+                 * @coversDefaultClass Bar
+                 */
+                class FooTest extends TestCase {
+                    /**
+                     * @ExpectedException Value
+                     * @expectedException X
+                     * @expectedException
+                     * @expectedException \Exception
+                         * @expectedException Some\Exception\ClassName
+                 * @expectedExceptionCode 123
+                     * @expectedExceptionMessage Foo bar
+                     *
+                     * @uses Baz
+                     * @uses selfieGenerator
+                     * @uses self::someFunction
+                     * @uses static::someOtherFunction
+                     */
+                }
+                EOF,
+        ];
+
+        yield [
+            '<?php
+class Foo {
+    /**
+     * @expectedException Some\Exception\ClassName
+     * @covers Foo
+     * @uses Baz
+     * @uses self::someFunction
+     */
+}
+',
+        ];
     }
 }

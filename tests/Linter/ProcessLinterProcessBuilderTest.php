@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,6 +16,9 @@ namespace PhpCsFixer\Tests\Linter;
 
 use PhpCsFixer\Linter\ProcessLinterProcessBuilder;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresOperatingSystem;
 
 /**
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
@@ -21,44 +26,63 @@ use PhpCsFixer\Tests\TestCase;
  * @internal
  *
  * @covers \PhpCsFixer\Linter\ProcessLinterProcessBuilder
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(ProcessLinterProcessBuilder::class)]
 final class ProcessLinterProcessBuilderTest extends TestCase
 {
     /**
-     * @param string $executable
-     * @param string $file
-     * @param string $expected
+     * @dataProvider providePrepareCommandOnPhpOnLinuxOrMacCases
      *
-     * @testWith ["php", "foo.php", "\"php\" -l \"foo.php\""]
-     *           ["C:\\Program Files\\php\\php.exe", "foo bar\\baz.php", "\"C:\\Program Files\\php\\php.exe\" -l \"foo bar\\baz.php\""]
      * @requires OS Linux|Darwin
      */
-    public function testPrepareCommandOnPhpOnLinuxOrMac($executable, $file, $expected)
+    #[DataProvider('providePrepareCommandOnPhpOnLinuxOrMacCases')]
+    #[RequiresOperatingSystem('Linux|Darwin')]
+    public function testPrepareCommandOnPhpOnLinuxOrMac(string $executable, string $file, string $expected): void
     {
-        $builder = new ProcessLinterProcessBuilder($executable);
-
-        $this->assertSame(
-            $expected,
-            $builder->build($file)->getCommandLine()
-        );
+        $this->testPrepareCommand($executable, $file, $expected);
     }
 
     /**
-     * @param string $executable
-     * @param string $file
-     * @param string $expected
+     * @return iterable<string, array{string, string, string}>
+     */
+    public static function providePrepareCommandOnPhpOnLinuxOrMacCases(): iterable
+    {
+        yield 'Linux-like' => ['php', 'foo.php', "'php' '-l' 'foo.php'"];
+
+        yield 'Windows-like' => ['C:\Program Files\php\php.exe', 'foo bar\baz.php', "'C:\\Program Files\\php\\php.exe' '-l' 'foo bar\\baz.php'"];
+    }
+
+    /**
+     * @dataProvider providePrepareCommandOnPhpOnWindowsCases
      *
-     * @testWith ["php", "foo.php", "\"php\" -l \"foo.php\""]
-     *           ["C:\\Program Files\\php\\php.exe", "foo bar\\baz.php", "\"C:\\Program Files\\php\\php.exe\" -l \"foo bar\\baz.php\""]
      * @requires OS ^Win
      */
-    public function testPrepareCommandOnPhpOnWindows($executable, $file, $expected)
+    #[DataProvider('providePrepareCommandOnPhpOnWindowsCases')]
+    #[RequiresOperatingSystem('^Win')]
+    public function testPrepareCommandOnPhpOnWindows(string $executable, string $file, string $expected): void
+    {
+        $this->testPrepareCommand($executable, $file, $expected);
+    }
+
+    /**
+     * @return iterable<string, array{string, string, string}>
+     */
+    public static function providePrepareCommandOnPhpOnWindowsCases(): iterable
+    {
+        yield 'Linux-like' => ['php', 'foo.php', 'C:\tools\php\php.EXE -l foo.php'];
+
+        yield 'Windows-like' => ['C:\Program Files\php\php.exe', 'foo bar\baz.php', '"C:\Program Files\php\php.exe" -l "foo bar\baz.php"'];
+    }
+
+    private function testPrepareCommand(string $executable, string $file, string $expected): void
     {
         $builder = new ProcessLinterProcessBuilder($executable);
 
-        $this->assertSame(
+        self::assertSame(
             $expected,
-            $builder->build($file)->getCommandLine()
+            $builder->build($file)->getCommandLine(),
         );
     }
 }

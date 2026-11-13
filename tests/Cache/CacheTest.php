@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -13,10 +15,15 @@
 namespace PhpCsFixer\Tests\Cache;
 
 use PhpCsFixer\Cache\Cache;
+use PhpCsFixer\Cache\CacheInterface;
 use PhpCsFixer\Cache\Signature;
 use PhpCsFixer\Cache\SignatureInterface;
+use PhpCsFixer\Config;
+use PhpCsFixer\Hasher;
 use PhpCsFixer\Tests\TestCase;
 use PhpCsFixer\ToolInfo;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @author Andreas Möller <am@localheinz.com>
@@ -24,88 +31,78 @@ use PhpCsFixer\ToolInfo;
  * @internal
  *
  * @covers \PhpCsFixer\Cache\Cache
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(Cache::class)]
 final class CacheTest extends TestCase
 {
-    public function testIsFinal()
+    public function testIsFinal(): void
     {
-        $reflection = new \ReflectionClass(\PhpCsFixer\Cache\Cache::class);
+        $reflection = new \ReflectionClass(Cache::class);
 
-        $this->assertTrue($reflection->isFinal());
+        self::assertTrue($reflection->isFinal());
     }
 
-    public function testImplementsCacheInterface()
+    public function testImplementsCacheInterface(): void
     {
-        $reflection = new \ReflectionClass(\PhpCsFixer\Cache\Cache::class);
+        $reflection = new \ReflectionClass(Cache::class);
 
-        $this->assertTrue($reflection->implementsInterface(\PhpCsFixer\Cache\CacheInterface::class));
+        self::assertTrue($reflection->implementsInterface(CacheInterface::class));
     }
 
-    public function testConstructorSetsValues()
+    public function testConstructorSetsValues(): void
     {
-        $signature = $this->getSignatureDouble();
+        $signature = $this->createSignatureDouble();
 
         $cache = new Cache($signature);
 
-        $this->assertSame($signature, $cache->getSignature());
+        self::assertSame($signature, $cache->getSignature());
     }
 
-    public function testDefaults()
+    public function testDefaults(): void
     {
-        $signature = $this->getSignatureDouble();
-
-        $cache = new Cache($signature);
-
-        $file = 'test.php';
-
-        $this->assertFalse($cache->has($file));
-        $this->assertNull($cache->get($file));
-    }
-
-    public function testSetThrowsInvalidArgumentExceptionIfValueIsNotAnInteger()
-    {
-        $this->expectException(\InvalidArgumentException::class);
-
-        $signature = $this->getSignatureDouble();
+        $signature = $this->createSignatureDouble();
 
         $cache = new Cache($signature);
 
         $file = 'test.php';
 
-        $cache->set($file, null);
+        self::assertFalse($cache->has($file));
+        self::assertNull($cache->get($file));
     }
 
-    public function testCanSetAndGetValue()
+    public function testCanSetAndGetValue(): void
     {
-        $signature = $this->getSignatureDouble();
+        $signature = $this->createSignatureDouble();
 
         $cache = new Cache($signature);
 
         $file = 'test.php';
-        $hash = crc32('hello');
+        $hash = Hasher::calculate('hello');
 
         $cache->set($file, $hash);
 
-        $this->assertTrue($cache->has($file));
-        $this->assertSame($hash, $cache->get($file));
+        self::assertTrue($cache->has($file));
+        self::assertSame($hash, $cache->get($file));
     }
 
-    public function testCanClearValue()
+    public function testCanClearValue(): void
     {
-        $signature = $this->getSignatureDouble();
+        $signature = $this->createSignatureDouble();
 
         $cache = new Cache($signature);
 
         $file = 'test.php';
-        $hash = crc32('hello');
+        $hash = Hasher::calculate('hello');
 
         $cache->set($file, $hash);
         $cache->clear($file);
 
-        $this->assertNull($cache->get($file));
+        self::assertNull($cache->get($file));
     }
 
-    public function testFromJsonThrowsInvalidArgumentExceptionIfJsonIsInvalid()
+    public function testFromJsonThrowsInvalidArgumentExceptionIfJsonIsInvalid(): void
     {
         $this->expectException(\InvalidArgumentException::class);
 
@@ -115,23 +112,24 @@ final class CacheTest extends TestCase
     }
 
     /**
-     * @dataProvider provideMissingDataCases
+     * @param array<string, mixed> $data
      *
-     * @param array $data
+     * @dataProvider provideFromJsonThrowsInvalidArgumentExceptionIfJsonIsMissingKeyCases
      */
-    public function testFromJsonThrowsInvalidArgumentExceptionIfJsonIsMissingKey(array $data)
+    #[DataProvider('provideFromJsonThrowsInvalidArgumentExceptionIfJsonIsMissingKeyCases')]
+    public function testFromJsonThrowsInvalidArgumentExceptionIfJsonIsMissingKey(array $data): void
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        $json = json_encode($data);
+        $json = json_encode($data, \JSON_THROW_ON_ERROR);
 
         Cache::fromJson($json);
     }
 
     /**
-     * @return array
+     * @return iterable<int, array{array<string, mixed>}>
      */
-    public function provideMissingDataCases()
+    public static function provideFromJsonThrowsInvalidArgumentExceptionIfJsonIsMissingKeyCases(): iterable
     {
         $data = [
             'php' => '7.1.2',
@@ -140,10 +138,11 @@ final class CacheTest extends TestCase
                 'foo' => true,
                 'bar' => false,
             ],
+            'ruleCustomisationPolicyVersion' => '1.2.3',
             'hashes' => [],
         ];
 
-        return array_map(static function ($missingKey) use ($data) {
+        return array_map(static function (string $missingKey) use ($data): array {
             unset($data[$missingKey]);
 
             return [
@@ -153,75 +152,155 @@ final class CacheTest extends TestCase
     }
 
     /**
+     * @param array<string, mixed> $data
+     *
+     * @dataProvider provideFromJsonThrowsInvalidArgumentExceptionIfKeyHasWrongTypeCases
+     */
+    #[DataProvider('provideFromJsonThrowsInvalidArgumentExceptionIfKeyHasWrongTypeCases')]
+    public function testFromJsonThrowsInvalidArgumentExceptionIfKeyHasWrongType(array $data): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('/ is expected to be (a string|an array)\.$/');
+
+        Cache::fromJson(json_encode($data, \JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>}>
+     */
+    public static function provideFromJsonThrowsInvalidArgumentExceptionIfKeyHasWrongTypeCases(): iterable
+    {
+        $valid = [
+            'php' => '7.1.2',
+            'version' => '2.0',
+            'indent' => '    ',
+            'lineEnding' => "\n",
+            'rules' => ['foo' => true],
+            'ruleCustomisationPolicyVersion' => '1.2.3',
+            'hashes' => [],
+        ];
+
+        foreach ([
+            'php' => 123,
+            'version' => 2.0,
+            'indent' => 4,
+            'lineEnding' => false,
+            'rules' => 'not-an-array',
+            'ruleCustomisationPolicyVersion' => 1,
+            'hashes' => 'not-an-array',
+        ] as $key => $wrongValue) {
+            yield $key => [array_merge($valid, [$key => $wrongValue])];
+        }
+    }
+
+    /**
      * @dataProvider provideCanConvertToAndFromJsonCases
      */
-    public function testCanConvertToAndFromJson(SignatureInterface $signature)
+    #[DataProvider('provideCanConvertToAndFromJsonCases')]
+    public function testCanConvertToAndFromJson(SignatureInterface $signature): void
     {
         $cache = new Cache($signature);
 
         $file = 'test.php';
-        $hash = crc32('hello');
+        $hash = Hasher::calculate('hello');
 
         $cache->set($file, $hash);
         $cached = Cache::fromJson($cache->toJson());
 
-        $this->assertTrue($cached->getSignature()->equals($signature));
-        $this->assertTrue($cached->has($file));
-        $this->assertSame($hash, $cached->get($file));
+        self::assertTrue($cached->getSignature()->equals($signature));
+        self::assertTrue($cached->has($file));
+        self::assertSame($hash, $cached->get($file));
     }
 
-    public function provideCanConvertToAndFromJsonCases()
+    /**
+     * @return iterable<int, array{Signature}>
+     */
+    public static function provideCanConvertToAndFromJsonCases(): iterable
     {
         $toolInfo = new ToolInfo();
+        $config = new Config();
 
-        return [
-            [new Signature(
-                PHP_VERSION,
-                '2.0',
-                [
-                    'foo' => true,
-                    'bar' => true,
-                ]
-            )],
-            [new Signature(
-                PHP_VERSION,
-                $toolInfo->getVersion(),
-                [
-                    // value encoded in ANSI, not UTF
-                    'header_comment' => ['header' => 'Dariusz '.base64_decode('UnVtafFza2k=', true)],
-                ]
-            )],
-        ];
+        yield [new Signature(
+            \PHP_VERSION,
+            '2.0',
+            '  ',
+            "\r\n",
+            [
+                'foo' => true,
+                'bar' => true,
+            ],
+            'fooBar',
+        )];
+
+        yield [new Signature(
+            \PHP_VERSION,
+            $toolInfo->getVersion(),
+            $config->getIndent(),
+            $config->getLineEnding(),
+            [
+                // value encoded in ANSI, not UTF
+                'header_comment' => ['header' => 'Dariusz '.base64_decode('UnVtafFza2k=', true)],
+            ],
+            'fooBar',
+        )];
     }
 
-    public function testToJsonThrowsExceptionOnInvalid()
+    public function testToJsonThrowsExceptionOnInvalid(): void
     {
-        $invalidUtf8Sequence = "\xB1\x31";
+        $signature = $this->createSignatureDouble();
 
-        $signature = $this->prophesize(\PhpCsFixer\Cache\SignatureInterface::class);
-        $signature->getPhpVersion()->willReturn('7.1.0');
-        $signature->getFixerVersion()->willReturn('2.2.0');
-        $signature->getRules()->willReturn([
-            $invalidUtf8Sequence => true,
-        ]);
-
-        $cache = new Cache($signature->reveal());
+        $cache = new Cache($signature);
 
         $this->expectException(
-            \UnexpectedValueException::class
+            \UnexpectedValueException::class,
         );
+
         $this->expectExceptionMessage(
-            'Can not encode cache signature to JSON, error: "Malformed UTF-8 characters, possibly incorrectly encoded". If you have non-UTF8 chars in your signature, like in license for `header_comment`, consider enabling `ext-mbstring` or install `symfony/polyfill-mbstring`.'
+            'Cannot encode cache signature to JSON, error: "Malformed UTF-8 characters, possibly incorrectly encoded". If you have non-UTF8 chars in your signature, like in license for `header_comment`, consider enabling `ext-mbstring` or install `symfony/polyfill-mbstring`.',
         );
 
         $cache->toJson();
     }
 
-    /**
-     * @return SignatureInterface
-     */
-    private function getSignatureDouble()
+    private function createSignatureDouble(): SignatureInterface
     {
-        return $this->prophesize(\PhpCsFixer\Cache\SignatureInterface::class)->reveal();
+        return new class implements SignatureInterface {
+            public function getPhpVersion(): string
+            {
+                return '7.1.0';
+            }
+
+            public function getFixerVersion(): string
+            {
+                return '2.2.0';
+            }
+
+            public function getIndent(): string
+            {
+                return '    ';
+            }
+
+            public function getLineEnding(): string
+            {
+                return \PHP_EOL;
+            }
+
+            public function getRules(): array
+            {
+                return [
+                    "\xB1\x31" => true, // invalid UTF8 sequence
+                ];
+            }
+
+            public function getRuleCustomisationPolicyVersion(): string
+            {
+                return 'Policy Version';
+            }
+
+            public function equals(SignatureInterface $signature): bool
+            {
+                throw new \LogicException('Not implemented.');
+            }
+        };
     }
 }

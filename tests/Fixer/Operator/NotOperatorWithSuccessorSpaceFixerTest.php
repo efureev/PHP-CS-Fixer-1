@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,64 +14,76 @@
 
 namespace PhpCsFixer\Tests\Fixer\Operator;
 
+use PhpCsFixer\Fixer\Operator\NotOperatorWithSuccessorSpaceFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Javier Spagnoletti <phansys@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Operator\NotOperatorWithSuccessorSpaceFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Operator\NotOperatorWithSuccessorSpaceFixer>
+ *
+ * @author Javier Spagnoletti <phansys@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NotOperatorWithSuccessorSpaceFixer::class)]
 final class NotOperatorWithSuccessorSpaceFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<array{string, string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php $i = 0; $i++; $foo = ! false || (! true || ! ! false && (2 === (7 -5)));',
-                '<?php $i = 0; $i++; $foo = !false || (!true || !!false && (2 === (7 -5)));',
-            ],
-            [
-                '<?php $i = 0; $i--; $foo = ! false || ($i && ! true);',
-                '<?php $i = 0; $i--; $foo = !false || ($i && !true);',
-            ],
-            [
-                '<?php $i = 0; $i--; $foo = ! false || ($i && ! /* some comment */true);',
-                '<?php $i = 0; $i--; $foo = !false || ($i && !/* some comment */true);',
-            ],
-            [
-                '<?php $i = 0; $i--; $foo = ! false || ($i && ! true);',
-                '<?php $i = 0; $i--; $foo = !false || ($i && !    true);',
-            ],
-            [
-                '<?php $i = 0; $i--; $foo = ! false || ($i && ! /* some comment */ true);',
-                '<?php $i = 0; $i--; $foo = !false || ($i && !  /* some comment */ true);',
-            ],
-            'comment case' => [
-                '<?php
+        yield [
+            '<?php $i = 0; $i++; $foo = ! false || (! true || ! ! false && (2 === (7 -5)));',
+            '<?php $i = 0; $i++; $foo = !false || (!true || !!false && (2 === (7 -5)));',
+        ];
+
+        yield [
+            '<?php $i = 0; $i--; $foo = ! false || ($i && ! true);',
+            '<?php $i = 0; $i--; $foo = !false || ($i && !true);',
+        ];
+
+        yield [
+            '<?php $i = 0; $i--; $foo = ! false || ($i && ! /* some comment */true);',
+            '<?php $i = 0; $i--; $foo = !false || ($i && !/* some comment */true);',
+        ];
+
+        yield [
+            '<?php $i = 0; $i--; $foo = ! false || ($i && ! true);',
+            '<?php $i = 0; $i--; $foo = !false || ($i && !    true);',
+        ];
+
+        yield [
+            '<?php $i = 0; $i--; $foo = ! false || ($i && ! /* some comment */ true);',
+            '<?php $i = 0; $i--; $foo = !false || ($i && !  /* some comment */ true);',
+        ];
+
+        yield 'comment case' => [
+            '<?php
                 $a=#
 ! #
 $b;
                 ',
-                '<?php
+            '<?php
                 $a=#
 !
 #
 $b;
                 ',
-            ],
         ];
     }
 }

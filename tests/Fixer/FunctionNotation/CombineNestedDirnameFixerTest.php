@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,97 +14,141 @@
 
 namespace PhpCsFixer\Tests\Fixer\FunctionNotation;
 
+use PhpCsFixer\Fixer\FunctionNotation\CombineNestedDirnameFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
- * @author Gregor Harlan
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\FunctionNotation\CombineNestedDirnameFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\FunctionNotation\CombineNestedDirnameFixer>
+ *
+ * @author Gregor Harlan
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(CombineNestedDirnameFixer::class)]
 final class CombineNestedDirnameFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
-     * @requires PHP 7.0
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php dirname();',
-            ],
-            [
-                '<?php dirname($path);',
-            ],
-            [
-                '<?php dirname($path, 3);',
-            ],
-            [
-                '<?php dirname($path,2);',
-                '<?php dirname(dirname($path));',
-            ],
-            [
-                '<?php dirname /* a */ ( /* b */  /* c */ $path /* d */,2);',
-                '<?php dirname /* a */ ( /* b */ dirname( /* c */ $path) /* d */);',
-            ],
-            [
-                '<?php dirname($path,3);',
-                '<?php dirname(\dirname(dirname($path)));',
-            ],
-            [
-                '<?php dirname($path ,4);',
-                '<?php dirname(dirname($path, 3));',
-            ],
-            [
-                '<?php dirname($path, 4);',
-                '<?php dirname(dirname($path), 3);',
-            ],
-            [
-                '<?php dirname($path , 5);',
-                '<?php dirname(dirname($path, 2), 3);',
-            ],
-            [
-                '<?php dirname($path ,5);',
-                '<?php dirname(dirname(dirname($path), 3));',
-            ],
-            [
-                '<?php dirname(dirname($path, $level));',
-            ],
-            [
-                '<?php dirname("foo/".dirname($path));',
-            ],
-            [
-                '<?php dirname(dirname($path).$foo);',
-            ],
-            [
-                '<?php foo\dirname(dirname($path));',
-            ],
-            [
-                '<?php dirname(foo(dirname($path,2)),2);',
-                '<?php dirname(dirname(foo(dirname(dirname($path)))));',
-            ],
-            [
-                '<?php new dirname(dirname($path,2));',
-                '<?php new dirname(dirname(dirname($path)));',
-            ],
+        yield [
+            '<?php dirname();',
+        ];
+
+        yield [
+            '<?php dirname($path);',
+        ];
+
+        yield [
+            '<?php dirname($path, 3);',
+        ];
+
+        yield [
+            '<?php dirname($path, 2);',
+            '<?php dirname(dirname($path));',
+        ];
+
+        yield [
+            '<?php dirname /* a */ ( /* b */ /* c */ $path /* d */, 2);',
+            '<?php dirname /* a */ ( /* b */ dirname( /* c */ $path) /* d */);',
+        ];
+
+        yield [
+            '<?php dirname($path, 3);',
+            '<?php dirname(\dirname(dirname($path)));',
+        ];
+
+        yield [
+            '<?php dirname($path, 4);',
+            '<?php dirname(dirname($path, 3));',
+        ];
+
+        yield [
+            '<?php dirname($path, 4);',
+            '<?php dirname(dirname($path), 3);',
+        ];
+
+        yield [
+            '<?php dirname($path, 5);',
+            '<?php dirname(dirname($path, 2), 3);',
+        ];
+
+        yield [
+            '<?php dirname($path, 5);',
+            '<?php dirname(dirname(dirname($path), 3));',
+        ];
+
+        yield [
+            '<?php dirname(dirname($path, $level));',
+        ];
+
+        yield [
+            '<?php dirname("foo/".dirname($path));',
+        ];
+
+        yield [
+            '<?php dirname(dirname($path).$foo);',
+        ];
+
+        yield [
+            '<?php foo\dirname(dirname($path));',
+        ];
+
+        yield [
+            '<?php dirname(foo(dirname($path, 2)), 2);',
+            '<?php dirname(dirname(foo(dirname(dirname($path)))));',
+        ];
+
+        yield [
+            '<?php new dirname(dirname($path, 2));',
+            '<?php new dirname(dirname(dirname($path)));',
+        ];
+
+        yield [
+            '<?php dirname($path, 3);',
+            '<?php dirname(dirname(dirname($path, ), ));',
+        ];
+
+        yield [
+            '<?php dirname($path, 3);',
+            '<?php dirname(dirname(dirname($path, ), ), );',
         ];
     }
 
     /**
-     * @requires PHP <7.0
+     * @dataProvider provideFix81Cases
+     *
+     * @requires PHP >= 8.1.0
      */
-    public function testDoNotFix()
+    #[DataProvider('provideFix81Cases')]
+    #[RequiresPhp('>= 8.1.0')]
+    public function testFix81(string $expected, ?string $input = null): void
     {
-        $this->doTest('<?php dirname(dirname($path));');
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<int, array{string}>
+     */
+    public static function provideFix81Cases(): iterable
+    {
+        yield ['<?php $a = dirname(dirname(...));'];
     }
 }

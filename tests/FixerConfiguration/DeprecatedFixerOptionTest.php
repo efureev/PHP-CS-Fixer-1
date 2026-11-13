@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -13,70 +15,64 @@
 namespace PhpCsFixer\Tests\FixerConfiguration;
 
 use PhpCsFixer\FixerConfiguration\DeprecatedFixerOption;
-use PhpCsFixer\FixerConfiguration\DeprecatedFixerOptionInterface;
 use PhpCsFixer\FixerConfiguration\FixerOption;
 use PhpCsFixer\FixerConfiguration\FixerOptionInterface;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @internal
  *
  * @covers \PhpCsFixer\FixerConfiguration\DeprecatedFixerOption
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(DeprecatedFixerOption::class)]
 final class DeprecatedFixerOptionTest extends TestCase
 {
-    public function testConstruct()
+    public function testGetName(): void
     {
         $option = new DeprecatedFixerOption(
             new FixerOption('foo', 'Foo.'),
-            'deprecated'
+            'deprecated',
         );
 
-        $this->assertInstanceOf(FixerOptionInterface::class, $option);
-        $this->assertInstanceOf(DeprecatedFixerOptionInterface::class, $option);
+        self::assertSame('foo', $option->getName());
     }
 
-    public function testGetName()
+    public function testGetDescription(): void
     {
         $option = new DeprecatedFixerOption(
             new FixerOption('foo', 'Foo.'),
-            'deprecated'
+            'deprecated',
         );
 
-        $this->assertSame('foo', $option->getName());
-    }
-
-    public function testGetDescription()
-    {
-        $option = new DeprecatedFixerOption(
-            new FixerOption('foo', 'Foo.'),
-            'deprecated'
-        );
-
-        $this->assertSame('Foo.', $option->getDescription());
+        self::assertSame('Foo.', $option->getDescription());
     }
 
     /**
-     * @param bool $isRequired
-     *
      * @dataProvider provideHasDefaultCases
      */
-    public function testHasDefault($isRequired)
+    #[DataProvider('provideHasDefaultCases')]
+    public function testHasDefault(bool $isRequired): void
     {
         $option = new DeprecatedFixerOption(
             new FixerOption('foo', 'Foo.', $isRequired),
-            'deprecated'
+            'deprecated',
         );
 
-        $this->assertSame(!$isRequired, $option->hasDefault());
+        self::assertSame(!$isRequired, $option->hasDefault());
     }
 
-    public function provideHasDefaultCases()
+    /**
+     * @return iterable<int, array{bool}>
+     */
+    public static function provideHasDefaultCases(): iterable
     {
-        return [
-            [true],
-            [false],
-        ];
+        yield [true];
+
+        yield [false];
     }
 
     /**
@@ -84,70 +80,122 @@ final class DeprecatedFixerOptionTest extends TestCase
      *
      * @dataProvider provideGetDefaultCases
      */
-    public function testGetDefault($default)
+    #[DataProvider('provideGetDefaultCases')]
+    public function testGetDefault($default): void
     {
         $option = new DeprecatedFixerOption(
             new FixerOption('foo', 'Foo.', false, $default),
-            'deprecated'
+            'deprecated',
         );
 
-        $this->assertSame($default, $option->getDefault());
+        self::assertSame($default, $option->getDefault());
     }
 
-    public function provideGetDefaultCases()
+    /**
+     * @return iterable<int, array{bool|string}>
+     */
+    public static function provideGetDefaultCases(): iterable
     {
-        return [
-            ['foo'],
-            [true],
-        ];
+        yield ['foo'];
+
+        yield [true];
     }
 
-    public function testGetAllowedTypes()
+    public function testGetAllowedTypes(): void
     {
         $allowedTypes = ['string', 'bool'];
 
         $option = new DeprecatedFixerOption(
             new FixerOption('foo', 'Foo.', true, null, $allowedTypes),
-            'deprecated'
+            'deprecated',
         );
 
-        $this->assertSame($allowedTypes, $option->getAllowedTypes());
+        self::assertSame($allowedTypes, $option->getAllowedTypes());
     }
 
-    public function testGetAllowedValues()
+    public function testGetAllowedValues(): void
     {
         $allowedValues = ['string', 'bool'];
 
         $option = new DeprecatedFixerOption(
             new FixerOption('foo', 'Foo.', true, null, [], $allowedValues),
-            'deprecated'
+            'deprecated',
         );
 
-        $this->assertSame($allowedValues, $option->getAllowedValues());
+        self::assertSame($allowedValues, $option->getAllowedValues());
     }
 
-    public function testGetNormalizer()
+    public function testGetNormalizer(): void
     {
-        $normalizer = function () {};
-
-        $decoratedOption = $this->prophesize(FixerOptionInterface::class);
-        $decoratedOption->getNormalizer()->willReturn($normalizer);
+        $normalizer = static fn () => null;
 
         $option = new DeprecatedFixerOption(
-            $decoratedOption->reveal(),
-            'deprecated'
+            $this->createFixerOptionDouble($normalizer),
+            'deprecated',
         );
 
-        $this->assertSame($normalizer, $option->getNormalizer());
+        self::assertSame($normalizer, $option->getNormalizer());
     }
 
-    public function testGetDeprecationMessage()
+    public function testGetDeprecationMessage(): void
     {
         $option = new DeprecatedFixerOption(
             new FixerOption('foo', 'Foo.'),
-            'Use option "bar" instead.'
+            'Use option "bar" instead.',
         );
 
-        $this->assertSame('Use option "bar" instead.', $option->getDeprecationMessage());
+        self::assertSame('Use option "bar" instead.', $option->getDeprecationMessage());
+    }
+
+    private function createFixerOptionDouble(\Closure $normalizer): FixerOptionInterface
+    {
+        return new class($normalizer) implements FixerOptionInterface {
+            private \Closure $normalizer;
+
+            public function __construct(\Closure $normalizer)
+            {
+                $this->normalizer = $normalizer;
+            }
+
+            public function getName(): string
+            {
+                throw new \LogicException('Not implemented.');
+            }
+
+            public function getDescription(): string
+            {
+                throw new \LogicException('Not implemented.');
+            }
+
+            public function hasDefault(): bool
+            {
+                throw new \LogicException('Not implemented.');
+            }
+
+            /**
+             * @return mixed
+             *
+             * @throws \LogicException when no default value is defined
+             */
+            public function getDefault()
+            {
+                throw new \LogicException('Not implemented.');
+            }
+
+            public function getAllowedTypes(): ?array
+            {
+                throw new \LogicException('Not implemented.');
+            }
+
+            public function getAllowedValues(): ?array
+            {
+                throw new \LogicException('Not implemented.');
+            }
+
+            public function getNormalizer(): \Closure
+            {
+                return $this->normalizer;
+            }
+        };
     }
 }

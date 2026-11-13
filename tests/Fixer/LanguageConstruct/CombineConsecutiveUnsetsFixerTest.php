@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,79 +14,91 @@
 
 namespace PhpCsFixer\Tests\Fixer\LanguageConstruct;
 
+use PhpCsFixer\Fixer\LanguageConstruct\CombineConsecutiveUnsetsFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\LanguageConstruct\CombineConsecutiveUnsetsFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\LanguageConstruct\CombineConsecutiveUnsetsFixer>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(CombineConsecutiveUnsetsFixer::class)]
 final class CombineConsecutiveUnsetsFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php //1
+        yield [
+            '<?php //1
                     unset($foo/*;*/, /*;*/$bar, $c , $foobar  ,  $foobar2);
                      //test
                      /* more comment test*/
                     '.'
                 ',
-                '<?php //1
+            '<?php //1
                     unset($foo/*;*/);
                     unset(/*;*/$bar, $c ); //test
                     unset($foobar  ); /* more comment test*/
                     unset(  $foobar2);
                 ',
-            ],
-            [
-                '<?php unset($d , $e);/*unset(    $d2);unset($e   );;*/    ',
-                '<?php unset($d );/*unset(    $d2);unset($e   );;*/    uNseT($e);',
-            ],
-            [
-                '<?php UNSET($a, $b,$c/**/); ',
-                '<?php UNSET($a); unset($b,$c/**/);',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php unset($d , $e);/*unset(    $d2);unset($e   );;*/    ',
+            '<?php unset($d );/*unset(    $d2);unset($e   );;*/    uNseT($e);',
+        ];
+
+        yield [
+            '<?php UNSET($a, $b,$c/**/); ',
+            '<?php UNSET($a); unset($b,$c/**/);',
+        ];
+
+        yield [
+            '<?php
               $config = array();
               if ($config) {
               }
               unset($config[\'autoescape_service\'], $config[\'autoescape_service_method\']);
               ',
-            ],
-            [
-                '<?php //2
+        ];
+
+        yield [
+            '<?php //2
                     unset($foo, $bar, $foobar, $foobar2, $foobar3);/*1*/
                     /*2*/
                     //3
                     /*4*/
                     /*5*/ '.'
                 ',
-                '<?php //2
+            '<?php //2
                     unset($foo);/*1*/
                     unset($bar);/*2*/
                     unset($foobar);//3
                     unset($foobar2);/*4*/
                     /*5*/ unset($foobar3);
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     unset($foo3, $bar, $test,$test1);
                         /* c1 */
                         '.'
@@ -92,7 +106,7 @@ final class CombineConsecutiveUnsetsFixerTest extends AbstractFixerTestCase
                 // c2
                 '.'
                 ',
-                '<?php
+            '<?php
                     unset($foo3);
                         /* c1 */
                         unset($bar);
@@ -100,23 +114,24 @@ final class CombineConsecutiveUnsetsFixerTest extends AbstractFixerTestCase
                 // c2
                 unset($test,$test1);
                 ',
-            ],
-            [
-                '<?php (unset)$f;',
-            ],
-            [
-                '<?php unset($x, $b  , $d);  /**/   ?> b',
-                '<?php unset($x);  /**/ unset ($b  , $d) ?> b',
-            ],
-            [
-                '<?php unset($x) ?>',
-            ],
-            [
-                '<?php unset($y, $u); ?>',
-                '<?php unset($y);unset($u) ?>',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php unset($x, $b  , $d);  /**/   ?> b',
+            '<?php unset($x);  /**/ unset ($b  , $d) ?> b',
+        ];
+
+        yield [
+            '<?php unset($x) ?>',
+        ];
+
+        yield [
+            '<?php unset($y, $u); ?>',
+            '<?php unset($y);unset($u) ?>',
+        ];
+
+        yield [
+            '<?php
                     unset($a[0], $a[\'a\'], $a["b"], $a->b, $a->b->c, $a->b[0]->c[\'a\']);
                     '.'
                     '.'
@@ -124,7 +139,7 @@ final class CombineConsecutiveUnsetsFixerTest extends AbstractFixerTestCase
                     '.'
                     '.'
                 ',
-                '<?php
+            '<?php
                     unset($a[0]);
                     unset($a[\'a\']);
                     unset($a["b"]);
@@ -132,7 +147,57 @@ final class CombineConsecutiveUnsetsFixerTest extends AbstractFixerTestCase
                     unset($a->b->c);
                     unset($a->b[0]->c[\'a\']);
                 ',
-            ],
+        ];
+
+        yield [
+            '<?php
+                unset(
+                    $array1["foo"],
+                    $array2["bar2"],
+                );
+
+                ',
+            '<?php
+                unset(
+                    $array1["foo"],
+                );
+
+                unset(
+                    $array2["bar2"],
+                );',
+        ];
+
+        yield [
+            '<?php
+                unset($array1["foo"],$array2["bar2"],);
+
+                ',
+            '<?php
+                unset($array1["foo"],);
+
+                unset($array2["bar2"],);',
+        ];
+    }
+
+    /**
+     * @dataProvider provideFixPre80Cases
+     *
+     * @requires PHP < 8.0.0
+     */
+    #[DataProvider('provideFixPre80Cases')]
+    #[RequiresPhp('< 8.0.0')]
+    public function testFixPre80(string $expected, ?string $input = null): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<int, array{string}>
+     */
+    public static function provideFixPre80Cases(): iterable
+    {
+        yield [
+            '<?php (unset)$f;',
         ];
     }
 }

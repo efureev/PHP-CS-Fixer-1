@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,56 +16,63 @@ namespace PhpCsFixer\Runner;
 
 use PhpCsFixer\Cache\CacheManagerInterface;
 use PhpCsFixer\FileReader;
-use PhpCsFixer\FixerFileProcessedEvent;
-use Symfony\Component\EventDispatcher\Event;
+use PhpCsFixer\Runner\Event\FileProcessed;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Contracts\EventDispatcher\Event;
 
 /**
+ * @internal
+ *
+ * @extends \FilterIterator<mixed, \SplFileInfo, \Iterator<mixed, \SplFileInfo>>
+ *
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
  *
- * @internal
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class FileFilterIterator extends \FilterIterator
 {
-    /**
-     * @var null|EventDispatcherInterface
-     */
-    private $eventDispatcher;
+    private ?EventDispatcherInterface $eventDispatcher;
+
+    private CacheManagerInterface $cacheManager;
 
     /**
-     * @var CacheManagerInterface
+     * @var array<string, bool>
      */
-    private $cacheManager;
+    private array $visitedElements = [];
 
     /**
-     * @var array<string,bool>
+     * @param iterable<\SplFileInfo> $iterator
      */
-    private $visitedElements = [];
-
     public function __construct(
-        \Iterator $iterator,
-        EventDispatcherInterface $eventDispatcher = null,
+        iterable $iterator,
+        ?EventDispatcherInterface $eventDispatcher,
         CacheManagerInterface $cacheManager
     ) {
+        if (!$iterator instanceof \Iterator) {
+            $iterator = new \IteratorIterator(
+                $iterator instanceof \Traversable ? $iterator : new \ArrayIterator($iterator),
+            );
+        }
+
         parent::__construct($iterator);
 
         $this->eventDispatcher = $eventDispatcher;
         $this->cacheManager = $cacheManager;
     }
 
-    public function accept()
+    public function accept(): bool
     {
         $file = $this->current();
         if (!$file instanceof \SplFileInfo) {
             throw new \RuntimeException(
-                sprintf(
+                \sprintf(
                     'Expected instance of "\SplFileInfo", got "%s".',
-                    \is_object($file) ? \get_class($file) : \gettype($file)
-                )
+                    get_debug_type($file),
+                ),
             );
         }
 
-        $path = $file->getRealPath();
+        $path = $file->isLink() ? $file->getPathname() : $file->getRealPath();
 
         if (isset($this->visitedElements[$path])) {
             return false;
@@ -84,10 +93,7 @@ final class FileFilterIterator extends \FilterIterator
             // file that does not need fixing due to cache
             || !$this->cacheManager->needFixing($file->getPathname(), $content)
         ) {
-            $this->dispatchEvent(
-                FixerFileProcessedEvent::NAME,
-                new FixerFileProcessedEvent(FixerFileProcessedEvent::STATUS_SKIPPED)
-            );
+            $this->dispatchEvent(FileProcessed::NAME, new FileProcessed(FileProcessed::STATUS_SKIPPED));
 
             return false;
         }
@@ -95,16 +101,12 @@ final class FileFilterIterator extends \FilterIterator
         return true;
     }
 
-    /**
-     * @param string $name
-     * @param Event  $event
-     */
-    private function dispatchEvent($name, Event $event)
+    private function dispatchEvent(string $name, Event $event): void
     {
         if (null === $this->eventDispatcher) {
             return;
         }
 
-        $this->eventDispatcher->dispatch($name, $event);
+        $this->eventDispatcher->dispatch($event, $name);
     }
 }

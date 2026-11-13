@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -15,15 +17,19 @@ namespace PhpCsFixer\Fixer\Casing;
 use PhpCsFixer\AbstractFixer;
 use PhpCsFixer\FixerDefinition\CodeSample;
 use PhpCsFixer\FixerDefinition\FixerDefinition;
+use PhpCsFixer\FixerDefinition\FixerDefinitionInterface;
 use PhpCsFixer\Tokenizer\Token;
 use PhpCsFixer\Tokenizer\Tokens;
 
 /**
- * @author SpacePossum
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class MagicMethodCasingFixer extends AbstractFixer
 {
-    private static $magicNames = [
+    /**
+     * @var array<string, string>
+     */
+    private const MAGIC_NAMES = [
         '__call' => '__call',
         '__callstatic' => '__callStatic',
         '__clone' => '__clone',
@@ -33,53 +39,50 @@ final class MagicMethodCasingFixer extends AbstractFixer
         '__get' => '__get',
         '__invoke' => '__invoke',
         '__isset' => '__isset',
+        '__serialize' => '__serialize',
         '__set' => '__set',
         '__set_state' => '__set_state',
         '__sleep' => '__sleep',
         '__tostring' => '__toString',
+        '__unserialize' => '__unserialize',
         '__unset' => '__unset',
         '__wakeup' => '__wakeup',
     ];
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getDefinition()
+    public function getDefinition(): FixerDefinitionInterface
     {
         return new FixerDefinition(
             'Magic method definitions and calls must be using the correct casing.',
             [
                 new CodeSample(
-'<?php
-class Foo
-{
-    public function __Sleep()
-    {
-    }
-}
-'
+                    <<<'PHP'
+                        <?php
+                        class Foo
+                        {
+                            public function __Sleep()
+                            {
+                            }
+                        }
+
+                        PHP,
                 ),
                 new CodeSample(
-'<?php
-$foo->__INVOKE(1);
-'
+                    <<<'PHP'
+                        <?php
+                        $foo->__INVOKE(1);
+
+                        PHP,
                 ),
-            ]
+            ],
         );
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function isCandidate(Tokens $tokens)
+    public function isCandidate(Tokens $tokens): bool
     {
-        return $tokens->isTokenKindFound(T_STRING) && $tokens->isAnyTokenKindsFound([T_FUNCTION, T_OBJECT_OPERATOR, T_DOUBLE_COLON]);
+        return $tokens->isTokenKindFound(\T_STRING) && $tokens->isAnyTokenKindsFound([\T_FUNCTION, \T_DOUBLE_COLON, ...Token::getObjectOperatorKinds()]);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function applyFix(\SplFileInfo $file, Tokens $tokens)
+    protected function applyFix(\SplFileInfo $file, Tokens $tokens): void
     {
         $inClass = 0;
         $tokenCount = \count($tokens);
@@ -106,12 +109,13 @@ $foo->__INVOKE(1);
                 }
             }
 
-            if (!$tokens[$index]->isGivenKind(T_STRING)) {
+            if (!$tokens[$index]->isGivenKind(\T_STRING)) {
                 continue; // wrong type
             }
 
             $content = $tokens[$index]->getContent();
-            if ('__' !== substr($content, 0, 2)) {
+
+            if (!str_starts_with($content, '__')) {
                 continue; // cheap look ahead
             }
 
@@ -150,48 +154,30 @@ $foo->__INVOKE(1);
         }
     }
 
-    /**
-     * @param Tokens $tokens
-     * @param int    $index
-     *
-     * @return bool
-     */
-    private function isFunctionSignature(Tokens $tokens, $index)
+    private function isFunctionSignature(Tokens $tokens, int $index): bool
     {
         $prevIndex = $tokens->getPrevMeaningfulToken($index);
-        if (!$tokens[$prevIndex]->isGivenKind(T_FUNCTION)) {
+        if (!$tokens[$prevIndex]->isGivenKind(\T_FUNCTION)) {
             return false; // not a method signature
         }
 
         return $tokens[$tokens->getNextMeaningfulToken($index)]->equals('(');
     }
 
-    /**
-     * @param Tokens $tokens
-     * @param int    $index
-     *
-     * @return bool
-     */
-    private function isMethodCall(Tokens $tokens, $index)
+    private function isMethodCall(Tokens $tokens, int $index): bool
     {
         $prevIndex = $tokens->getPrevMeaningfulToken($index);
-        if (!$tokens[$prevIndex]->equals([T_OBJECT_OPERATOR, '->'])) {
+        if (!$tokens[$prevIndex]->isObjectOperator()) {
             return false; // not a "simple" method call
         }
 
         return $tokens[$tokens->getNextMeaningfulToken($index)]->equals('(');
     }
 
-    /**
-     * @param Tokens $tokens
-     * @param int    $index
-     *
-     * @return bool
-     */
-    private function isStaticMethodCall(Tokens $tokens, $index)
+    private function isStaticMethodCall(Tokens $tokens, int $index): bool
     {
         $prevIndex = $tokens->getPrevMeaningfulToken($index);
-        if (!$tokens[$prevIndex]->isGivenKind(T_DOUBLE_COLON)) {
+        if (!$tokens[$prevIndex]->isGivenKind(\T_DOUBLE_COLON)) {
             return false; // not a "simple" static method call
         }
 
@@ -199,32 +185,25 @@ $foo->__INVOKE(1);
     }
 
     /**
-     * @param string $name
-     *
-     * @return bool
+     * @phpstan-assert-if-true key-of<self::MAGIC_NAMES> $name
      */
-    private function isMagicMethodName($name)
+    private function isMagicMethodName(string $name): bool
     {
-        return isset(self::$magicNames[$name]);
+        return isset(self::MAGIC_NAMES[$name]);
     }
 
     /**
-     * @param string $name name of a magic method
+     * @param key-of<self::MAGIC_NAMES> $name name of a magic method
      *
-     * @return string
+     * @return value-of<self::MAGIC_NAMES>
      */
-    private function getMagicMethodNameInCorrectCasing($name)
+    private function getMagicMethodNameInCorrectCasing(string $name): string
     {
-        return self::$magicNames[$name];
+        return self::MAGIC_NAMES[$name];
     }
 
-    /**
-     * @param Tokens $tokens
-     * @param int    $index
-     * @param string $nameInCorrectCasing
-     */
-    private function setTokenToCorrectCasing(Tokens $tokens, $index, $nameInCorrectCasing)
+    private function setTokenToCorrectCasing(Tokens $tokens, int $index, string $nameInCorrectCasing): void
     {
-        $tokens[$index] = new Token([T_STRING, $nameInCorrectCasing]);
+        $tokens[$index] = new Token([\T_STRING, $nameInCorrectCasing]);
     }
 }

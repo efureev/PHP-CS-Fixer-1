@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,33 +14,39 @@
 
 namespace PhpCsFixer\Tests\Fixer\Phpdoc;
 
+use PhpCsFixer\Fixer\Phpdoc\NoEmptyPhpdocFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Phpdoc\NoEmptyPhpdocFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Phpdoc\NoEmptyPhpdocFixer>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NoEmptyPhpdocFixer::class)]
 final class NoEmptyPhpdocFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield 'multiple PHPdocs' => [
+            '<?php
                     /** a */
 
                     '.'
@@ -54,7 +62,7 @@ final class NoEmptyPhpdocFixerTest extends AbstractFixerTestCase
 
                      /** *test* */
                 ',
-                '<?php
+            '<?php
                     /**  *//** a *//**  */
 
                     /**
@@ -76,7 +84,145 @@ final class NoEmptyPhpdocFixerTest extends AbstractFixerTestCase
 
                      /** *test* */
                 ',
-            ],
+        ];
+
+        yield 'PHPDoc on its own line' => [
+            <<<'PHP'
+                <?php
+                echo $a;
+                echo $b;
+                PHP,
+            <<<'PHP'
+                <?php
+                echo $a;
+                /** */
+                echo $b;
+                PHP,
+        ];
+
+        yield 'PHPDoc on its own line with empty line before' => [
+            <<<'PHP'
+                <?php
+                function f() {
+                    echo $a;
+
+                    echo $b;
+                }
+                PHP,
+            <<<'PHP'
+                <?php
+                function f() {
+                    echo $a;
+
+                    /** */
+                    echo $b;
+                }
+                PHP,
+        ];
+
+        yield 'PHPDoc on its own line with empty line after' => [
+            <<<'PHP'
+                <?php
+                echo $a;
+
+                echo $b;
+                PHP,
+            <<<'PHP'
+                <?php
+                echo $a;
+                /** */
+
+                echo $b;
+                PHP,
+        ];
+
+        yield 'PHPDoc on its own line with empty line before and after' => [
+            <<<'PHP'
+                <?php
+                echo $a;
+
+
+                echo $b;
+                PHP,
+            <<<'PHP'
+                <?php
+                echo $a;
+
+                /** */
+
+                echo $b;
+                PHP,
+        ];
+
+        yield 'PHPDoc with empty line before and content after' => [
+            <<<'PHP'
+                <?php
+                function f() {
+                    echo $a;
+                    echo $b;
+                }
+                PHP,
+            <<<'PHP'
+                <?php
+                function f() {
+                    echo $a;
+                    /** */echo $b;
+                }
+                PHP,
+        ];
+
+        yield 'PHPDoc with content before and empty line after' => [
+            <<<'PHP'
+                <?php
+                function f() {
+                    echo $a;
+                    echo $b;
+                }
+                PHP,
+            <<<'PHP'
+                <?php
+                function f() {
+                    echo $a;/** */
+                    echo $b;
+                }
+                PHP,
+        ];
+
+        yield 'PHPDoc after open tag - the same line' => [
+            '<?php '.'
+                foo();
+                ',
+            '<?php /** */
+                foo();
+                ',
+        ];
+
+        yield 'PHPDoc after open tag - next line' => [
+            <<<'PHP'
+                <?php
+                foo();
+                PHP,
+            <<<'PHP'
+                <?php
+                /** */
+                foo();
+                PHP,
+        ];
+
+        yield 'PHPDoc after open tag - next next next line' => [
+            <<<'PHP'
+                <?php
+
+
+                foo();
+                PHP,
+            <<<'PHP'
+                <?php
+
+
+                /** */
+                foo();
+                PHP,
         ];
     }
 }

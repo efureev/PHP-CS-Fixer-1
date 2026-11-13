@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,37 +14,44 @@
 
 namespace PhpCsFixer\Tests\Fixer\Phpdoc;
 
+use PhpCsFixer\Fixer\Phpdoc\PhpdocIndentFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Ceeram <ceeram@cakephp.org>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Phpdoc\PhpdocIndentFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Phpdoc\PhpdocIndentFixer>
+ *
+ * @author Ceeram <ceeram@cakephp.org>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(PhpdocIndentFixer::class)]
 final class PhpdocIndentFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideFixIndentCases
+     * @dataProvider provideFixCases
      */
-    public function testFixIndent($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixIndentCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        $cases = [];
+        yield ['<?php /** @var Foo $foo */ ?>'];
 
-        $cases[] = ['<?php /** @var Foo $foo */ ?>'];
+        yield ['<?php /** foo */'];
 
-        $cases[] = ['<?php /** foo */'];
-
-        $cases[] = [
+        yield [
             '<?php
 /**
  * Do not indent
@@ -85,7 +94,7 @@ class DocBlocks
 }',
         ];
 
-        $cases[] = [
+        yield [
             '<?php
 class DocBlocks
 {
@@ -154,7 +163,7 @@ class DocBlocks
 }',
         ];
 
-        $cases[] = [
+        yield [
             '<?php
 /**
  * Final class should also not be indented
@@ -179,7 +188,7 @@ final class DocBlocks
 }',
         ];
 
-        $cases[] = [
+        yield [
             '<?php
     if (1) {
         class Foo {
@@ -210,7 +219,7 @@ final class DocBlocks
     }',
         ];
 
-        $cases[] = [
+        yield [
             '<?php
 /**
  * Variable
@@ -297,19 +306,19 @@ $partialFix = true;
     }',
         ];
 
-        $cases[] = [
+        yield [
             '<?php
     $user = $event->getForm()->getData();  /** @var User $user */
     echo "Success";',
         ];
 
-        $cases[] = [
+        yield [
             '<?php
     $user = $event->getForm()->getData();/** @var User $user */
     echo "Success";',
         ];
 
-        $cases[] = [
+        yield [
             "<?php
 class DocBlocks
 {
@@ -338,7 +347,7 @@ class DocBlocks
 }",
         ];
 
-        $cases[] = [
+        yield [
             '<?php
 /**
  * Used to write a value to a session key.
@@ -357,7 +366,7 @@ function write(\$name) {}
 ",
         ];
 
-        $cases[] = [
+        yield [
             '<?php
     class Foo
     {
@@ -370,7 +379,7 @@ function write(\$name) {}
     }',
         ];
 
-        $cases[] = [
+        yield [
             '<?php
 /**
  * docs
@@ -381,7 +390,7 @@ $foo = $bar;
 ',
         ];
 
-        $cases[] = [
+        yield [
             '<?php
 function foo()
 {
@@ -390,7 +399,7 @@ function foo()
 }',
         ];
 
-        $cases[] = [
+        yield [
             '<?php
 
 /**
@@ -402,7 +411,7 @@ class Foo
 }',
         ];
 
-        $cases[] = [
+        yield [
             '<?php
 class Application
 {
@@ -414,6 +423,15 @@ class Dispatcher
 ',
         ];
 
-        return $cases;
+        yield [
+            '<?php
+$foo->bar()    /** comment */
+    ->baz();
+',
+            '<?php
+$foo->bar()/** comment */
+    ->baz();
+',
+        ];
     }
 }

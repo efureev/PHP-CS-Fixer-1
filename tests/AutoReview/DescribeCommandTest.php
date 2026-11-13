@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,28 +16,74 @@ namespace PhpCsFixer\Tests\AutoReview;
 
 use PhpCsFixer\Console\Application;
 use PhpCsFixer\Console\Command\DescribeCommand;
+use PhpCsFixer\Console\ConfigurationResolver;
+use PhpCsFixer\Fixer\DeprecatedFixerInterface;
+use PhpCsFixer\Fixer\Internal\ConfigurableFixerTemplateFixer;
 use PhpCsFixer\FixerFactory;
+use PhpCsFixer\RuleSet\RuleSets;
 use PhpCsFixer\Tests\TestCase;
+use PhpCsFixer\Utils;
+use PHPUnit\Framework\Attributes\CoversNothing;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Console\Tester\CommandTester;
 
 /**
  * @internal
  *
  * @coversNothing
+ *
+ * @group legacy
  * @group auto-review
  * @group covers-nothing
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversNothing]
+#[Group('legacy')]
+#[Group('auto-review')]
+#[Group('covers-nothing')]
 final class DescribeCommandTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+
+        // Reset the global state of RuleSets::$customRuleSetDefinitions that was modified
+        // when using `.php-cs-fixer.dist.php`, which registers custom rules/sets.
+        //
+        // @TODO: ideally, we don't have the global state but inject the state instead
+        \Closure::bind(
+            static fn () => RuleSets::$customRuleSetDefinitions = [],
+            null,
+            RuleSets::class,
+        )();
+    }
+
     /**
      * @dataProvider provideDescribeCommandCases
      *
-     * @param FixerFactory $factory
-     * @param string       $fixerName
+     * @param list<string> $successorsNames
      */
-    public function testDescribeCommand(FixerFactory $factory, $fixerName)
+    #[DataProvider('provideDescribeCommandCases')]
+    public function testDescribeCommand(string $fixerName, ?array $successorsNames, ?string $configFile = null): void
     {
-        $command = new DescribeCommand($factory);
+        if (null !== $successorsNames) {
+            $message = "Rule \"{$fixerName}\" is DEPRECATED and will be removed in the next major version 4.0. "
+                .([] === $successorsNames
+                    ? 'No replacement available.'
+                    : \sprintf('You should use %s instead.', Utils::naturalLanguageJoin($successorsNames)));
+            $this->expectDeprecation($message);
+        }
+
+        if ('ordered_imports' === $fixerName) {
+            $this->expectDeprecation('[ordered_imports] Option "sort_algorithm:length" is deprecated and will be removed in version 4.0.');
+        }
+        if ('nullable_type_declaration_for_default_null_value' === $fixerName) {
+            $this->expectDeprecation('Option "use_nullable_type_declaration" for rule "nullable_type_declaration_for_default_null_value" is deprecated and will be removed in version 4.0. Behaviour will follow default one.');
+        }
+
+        $command = new DescribeCommand();
 
         $application = new Application();
         $application->add($command);
@@ -44,22 +92,32 @@ final class DescribeCommandTest extends TestCase
         $commandTester->execute([
             'command' => $command->getName(),
             'name' => $fixerName,
+            '--config' => $configFile ?? ConfigurationResolver::IGNORE_CONFIG_FILE,
         ]);
 
-        $this->assertSame(0, $commandTester->getStatusCode());
+        self::assertSame(0, $commandTester->getStatusCode());
     }
 
-    public function provideDescribeCommandCases()
+    /**
+     * @return iterable<int, array{string, null|list<string>, 2?: null|string}>
+     */
+    public static function provideDescribeCommandCases(): iterable
     {
+        // internal rules
+        yield [
+            (new ConfigurableFixerTemplateFixer())->getName(),
+            null,
+            __DIR__.'/../Fixtures/.php-cs-fixer.one-time-proxy.php',
+        ];
+
         $factory = new FixerFactory();
         $factory->registerBuiltInFixers();
 
-        $cases = [];
-
         foreach ($factory->getFixers() as $fixer) {
-            $cases[] = [$factory, $fixer->getName()];
+            yield [
+                $fixer->getName(),
+                $fixer instanceof DeprecatedFixerInterface ? $fixer->getSuccessorsNames() : null,
+            ];
         }
-
-        return $cases;
     }
 }

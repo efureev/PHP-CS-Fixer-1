@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,33 +14,42 @@
 
 namespace PhpCsFixer\Tests\Fixer\ControlStructure;
 
+use PhpCsFixer\Fixer\ControlStructure\SwitchCaseSpaceFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
- * @author Sullivan Senechal <soullivaneuh@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\ControlStructure\SwitchCaseSpaceFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\ControlStructure\SwitchCaseSpaceFixer>
+ *
+ * @author Sullivan Senechal <soullivaneuh@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(SwitchCaseSpaceFixer::class)]
 final class SwitchCaseSpaceFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
     switch (1) {
         case (1 #
 )#
@@ -47,183 +58,204 @@ final class SwitchCaseSpaceFixerTest extends AbstractFixerTestCase
     }
 ?>
 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     switch (1) {
         case 1 #
             : echo 1;
     }
 ?>
 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 switch ($a) {
                     case 42:
                         break;
                 }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 switch ($a) {
                     case false:
                         break;
                 }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 switch ($a) {
                     case false:
                         break;
                     default:
                 }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
+                switch ($a) {
+                    case "prod":
+                    case "stg":
+                    case "dev":
+                    case "test":
+                    default:
+                }
+                ',
+            '<?php
+                switch ($a) {
+                    case "prod" :
+                    case "stg"   :
+                    case "dev":
+                    case "test"    :
+                    default:
+                }
+                ',
+        ];
+
+        yield [
+            '<?php
                 switch ($a) {
                     case "prod":
                         break;
                 }
                 ',
-                '<?php
+            '<?php
                 switch ($a) {
                     case "prod" :
                         break;
                 }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 switch ($a) {
                     case "prod":
                         break;
                 }
                 ',
-                '<?php
+            '<?php
                 switch ($a) {
                     case "prod"       :
                         break;
                 }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 switch ($a) {
                     case 42:
                         break;
                 }
                 ',
-                '<?php
+            '<?php
                 switch ($a) {
                     case 42 :
                         break;
                 }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 switch ($a) {
                     case false:
                         break;
                 }
                 ',
-                '<?php
+            '<?php
                 switch ($a) {
                     case false :
                         break;
                 }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 switch ($a) {
                     case false:
                         break;
                     default:
                 }
                 ',
-                '<?php
+            '<?php
                 switch ($a) {
                     case false :
                         break;
                     default :
                 }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 switch ($a) {
                     case 42:
                         break;
                 }
                 ',
-                '<?php
+            '<?php
                 switch ($a) {
                     case 42    :
                         break;
                 }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 switch ($a) {
                     case $b ? "c" : "d":
                         break;
                 }
                 ',
-                '<?php
+            '<?php
                 switch ($a) {
                     case $b ? "c" : "d" :
                         break;
                 }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 switch ($a) {
                     case $b ? "c" : "d": break;
                 }
                 ',
-                '<?php
+            '<?php
                 switch ($a) {
                     case $b ? "c" : "d" : break;
                 }
                 ',
-            ],
-            [
-                '<?php
-                switch ($a) {
-                    case $b ? "c" : "this" ? "is" : "ugly":
-                        break;
-                }
-                ',
-                '<?php
-                switch ($a) {
-                    case $b ? "c" : "this" ? "is" : "ugly" :
-                        break;
-                }
-                ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 switch ($a) {
                     case $b ?: $c:
                         break;
                 }
                 ',
-                '<?php
+            '<?php
                 switch ($a) {
                     case $b ?: $c :
                         break;
                 }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 $a = 5.1;
                 $b = 1.0;
                 switch($a) {
@@ -256,7 +288,7 @@ final class SwitchCaseSpaceFixerTest extends AbstractFixerTestCase
                     }
                 }
                 ',
-                '<?php
+            '<?php
                 $a = 5.1;
                 $b = 1.0;
                 switch($a) {
@@ -289,8 +321,10 @@ final class SwitchCaseSpaceFixerTest extends AbstractFixerTestCase
                     }
                 }
                 ',
-                [
-                    '<?php
+        ];
+
+        yield [
+            '<?php
                     switch ($a) {
                         case 42:
                             break;
@@ -303,7 +337,7 @@ final class SwitchCaseSpaceFixerTest extends AbstractFixerTestCase
                             }
                     }
                     ',
-                    '<?php
+            '<?php
                     switch ($a) {
                         case 42   :
                             break;
@@ -316,10 +350,10 @@ final class SwitchCaseSpaceFixerTest extends AbstractFixerTestCase
                             }
                     }
                     ',
-                ],
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     switch($foo) {
                         case 4:  ; ;
                         case 31 + test(";");  ; ; ;;
@@ -331,7 +365,7 @@ final class SwitchCaseSpaceFixerTest extends AbstractFixerTestCase
                         default;
                             return 2;
                 }',
-                '<?php
+            '<?php
                     switch($foo) {
                         case 4  :  ; ;
                         case 31 + test(";") ;  ; ; ;;
@@ -343,7 +377,125 @@ final class SwitchCaseSpaceFixerTest extends AbstractFixerTestCase
                         default ;
                             return 2;
                 }',
-            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideFixPre80Cases
+     *
+     * @requires PHP < 8.0.0
+     */
+    #[DataProvider('provideFixPre80Cases')]
+    #[RequiresPhp('< 8.0.0')]
+    public function testFixPre80(string $expected, ?string $input = null): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideFixPre80Cases(): iterable
+    {
+        yield [
+            '<?php
+                switch ($a) {
+                    case $b ? "c" : "this" ? "is" : "ugly":
+                        break;
+                }
+                ',
+            '<?php
+                switch ($a) {
+                    case $b ? "c" : "this" ? "is" : "ugly" :
+                        break;
+                }
+                ',
+        ];
+    }
+
+    /**
+     * @dataProvider provideFix80Cases
+     *
+     * @requires PHP >= 8.0.0
+     */
+    #[DataProvider('provideFix80Cases')]
+    #[RequiresPhp('>= 8.0.0')]
+    public function testFix80(string $expected, ?string $input = null): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<int, array{string}>
+     */
+    public static function provideFix80Cases(): iterable
+    {
+        yield [
+            '<?php
+                match ($foo) {
+                    1 => "a",
+                    default => "b"
+                };
+                match ($bar) {
+                    2 => "c",
+                    default=> "d"
+                };
+                match ($baz) {
+                    3 => "e",
+                    default   => "f"
+                };
+            ',
+        ];
+
+        yield [
+            '<?php
+$a = function (): ?string {
+    return $rank ? match (true) {
+      $rank <= 1000 => \'bronze\',
+      default => null,
+  } : null;
+};',
+        ];
+    }
+
+    /**
+     * @dataProvider provideFix81Cases
+     *
+     * @requires PHP >= 8.1.0
+     */
+    #[DataProvider('provideFix81Cases')]
+    #[RequiresPhp('>= 8.1.0')]
+    public function testFix81(string $expected, ?string $input = null): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function provideFix81Cases(): iterable
+    {
+        yield 'enums' => [
+            '<?php
+enum Suit {
+    case Hearts;
+    case Diamonds  ;
+    case Clubs ;
+    case Spades   ;
+}
+
+enum UserStatus: string {
+  case    Pending = \'P\';
+  case  Active = \'A\';
+  case   Suspended = \'S\';
+  case CanceledByUser = \'C\'  ;
+}
+
+switch ($a) {
+    default:
+        echo 1;
+}
+',
         ];
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -13,9 +15,12 @@
 namespace PhpCsFixer\Tests\Tokenizer\Analyzer;
 
 use PhpCsFixer\Tests\TestCase;
+use PhpCsFixer\Tokenizer\Analyzer\Analysis\NamespaceAnalysis;
 use PhpCsFixer\Tokenizer\Analyzer\Analysis\NamespaceUseAnalysis;
 use PhpCsFixer\Tokenizer\Analyzer\NamespaceUsesAnalyzer;
 use PhpCsFixer\Tokenizer\Tokens;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @author VeeWee <toonverwerft@gmail.com>
@@ -23,133 +28,595 @@ use PhpCsFixer\Tokenizer\Tokens;
  * @internal
  *
  * @covers \PhpCsFixer\Tokenizer\Analyzer\NamespaceUsesAnalyzer
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NamespaceUsesAnalyzer::class)]
 final class NamespaceUsesAnalyzerTest extends TestCase
 {
     /**
-     * @param string $code
-     * @param array  $expected
+     * @param list<NamespaceUseAnalysis> $expected
      *
-     * @dataProvider provideNamespaceUsesCases
+     * @dataProvider provideUsesFromTokensCases
      */
-    public function testUsesFromTokens($code, $expected)
+    #[DataProvider('provideUsesFromTokensCases')]
+    public function testUsesFromTokens(string $code, array $expected, bool $allowMulti = false): void
     {
         $tokens = Tokens::fromCode($code);
         $analyzer = new NamespaceUsesAnalyzer();
 
-        $this->assertSame(serialize($expected), serialize($analyzer->getDeclarationsFromTokens($tokens)));
+        self::assertSame(
+            serialize($expected),
+            serialize($analyzer->getDeclarationsFromTokens($tokens, $allowMulti)),
+        );
     }
 
-    public function provideNamespaceUsesCases()
+    /**
+     * @return iterable<array{0: string, 1: list<NamespaceUseAnalysis>, 2?: bool}>
+     */
+    public static function provideUsesFromTokensCases(): iterable
     {
-        return [
-            ['<?php // no uses', [], []],
-            ['<?php use Foo\Bar;', [
+        yield ['<?php // no uses', []];
+
+        yield ['<?php use Foo\Bar;', [
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CLASS,
+                'Foo\Bar',
+                'Bar',
+                false,
+                false,
+                1,
+                6,
+            ),
+        ]];
+
+        yield ['<?php use Foo\Bar; use Foo\Baz;', [
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CLASS,
+                'Foo\Bar',
+                'Bar',
+                false,
+                false,
+                1,
+                6,
+            ),
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CLASS,
+                'Foo\Baz',
+                'Baz',
+                false,
+                false,
+                8,
+                13,
+            ),
+        ]];
+
+        yield ['<?php use \Foo\Bar;', [
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CLASS,
+                '\Foo\Bar',
+                'Bar',
+                false,
+                false,
+                1,
+                7,
+            ),
+        ]];
+
+        yield ['<?php use Foo\Bar as Baz;', [
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CLASS,
+                'Foo\Bar',
+                'Baz',
+                true,
+                false,
+                1,
+                10,
+            ),
+        ]];
+
+        yield ['<?php use Foo\Bar as Baz; use Foo\Buz as Baz;', [
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CLASS,
+                'Foo\Bar',
+                'Baz',
+                true,
+                false,
+                1,
+                10,
+            ),
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CLASS,
+                'Foo\Buz',
+                'Baz',
+                true,
+                false,
+                12,
+                21,
+            ),
+        ]];
+
+        yield ['<?php use function My\count;', [
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_FUNCTION,
+                'My\count',
+                'count',
+                false,
+                false,
+                1,
+                8,
+            ),
+        ]];
+
+        yield ['<?php use function My\count as myCount;', [
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_FUNCTION,
+                'My\count',
+                'myCount',
+                true,
+                false,
+                1,
+                12,
+            ),
+        ]];
+
+        yield ['<?php use const My\Full\CONSTANT;', [
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CONSTANT,
+                'My\Full\CONSTANT',
+                'CONSTANT',
+                false,
+                false,
+                1,
+                10,
+            ),
+        ]];
+
+        yield 'Comma-separated class import with multi-use parsing disabled' => ['<?php use Foo\Bar, Foo\Baz;', [], false];
+
+        yield 'Group class import with multi-use parsing disabled' => ['<?php use Foo\{Bar, Baz};', [], false];
+
+        yield 'Comma-separated class import' => ['<?php use Foo\Bar, Foo\Baz;', [
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CLASS,
+                'Foo\Bar',
+                'Bar',
+                false,
+                true,
+                1,
+                11,
+                3,
+                5,
+            ),
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CLASS,
+                'Foo\Baz',
+                'Baz',
+                false,
+                true,
+                1,
+                11,
+                8,
+                10,
+            ),
+        ], true];
+
+        yield 'group class import' => ['<?php use Foo\{Bar, Baz};', [
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CLASS,
+                'Foo\Bar',
+                'Bar',
+                false,
+                true,
+                1,
+                11,
+                6,
+                6,
+            ),
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CLASS,
+                'Foo\Baz',
+                'Baz',
+                false,
+                true,
+                1,
+                11,
+                9,
+                9,
+            ),
+        ], true];
+
+        yield 'Comma-separated function import' => ['<?php use function Foo\bar, Foo\baz;', [
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_FUNCTION,
+                'Foo\bar',
+                'bar',
+                false,
+                true,
+                1,
+                13,
+                5,
+                7,
+            ),
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_FUNCTION,
+                'Foo\baz',
+                'baz',
+                false,
+                true,
+                1,
+                13,
+                10,
+                12,
+            ),
+        ], true];
+
+        yield 'group function import' => ['<?php use function Foo\{bar, baz};', [
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_FUNCTION,
+                'Foo\bar',
+                'bar',
+                false,
+                true,
+                1,
+                13,
+                8,
+                8,
+            ),
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_FUNCTION,
+                'Foo\baz',
+                'baz',
+                false,
+                true,
+                1,
+                13,
+                11,
+                11,
+            ),
+        ], true];
+
+        yield 'Comma-separated constant import' => ['<?php use const Foo\BAR, Foo\BAZ;', [
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CONSTANT,
+                'Foo\BAR',
+                'BAR',
+                false,
+                true,
+                1,
+                13,
+                5,
+                7,
+            ),
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CONSTANT,
+                'Foo\BAZ',
+                'BAZ',
+                false,
+                true,
+                1,
+                13,
+                10,
+                12,
+            ),
+        ], true];
+
+        yield 'group constant import' => ['<?php use const Foo\{BAR, BAZ};', [
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CONSTANT,
+                'Foo\BAR',
+                'BAR',
+                false,
+                true,
+                1,
+                13,
+                8,
+                8,
+            ),
+            new NamespaceUseAnalysis(
+                NamespaceUseAnalysis::TYPE_CONSTANT,
+                'Foo\BAZ',
+                'BAZ',
+                false,
+                true,
+                1,
+                13,
+                11,
+                11,
+            ),
+        ], true];
+
+        yield 'multiple multi-imports with comments' => [
+            <<<'PHP'
+                <?php
+                use Foo\Bar, /* Foo\Baz, */ Foo\Buzz, /** Foo\Bazzz, */ Foo\Bazzzz;
+                use function Bar\f1, /* Bar\f2, */ Bar\f3, /** Bar\f4, */ Bar\f5;
+                use const Buzz\C1, /* Buzz\C2, */ Buzz\C3, /** Buzz\C4, */ Buzz\C5;
+                PHP,
+            [
                 new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_CLASS,
                     'Foo\Bar',
                     'Bar',
                     false,
+                    true,
                     1,
-                    6,
-                    NamespaceUseAnalysis::TYPE_CLASS
+                    20,
+                    3,
+                    5,
                 ),
-            ], [1]],
-            ['<?php use Foo\Bar; use Foo\Baz;', [
                 new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_CLASS,
+                    'Foo\Buzz',
+                    'Buzz',
+                    false,
+                    true,
+                    1,
+                    20,
+                    10,
+                    12,
+                ),
+                new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_CLASS,
+                    'Foo\Bazzzz',
+                    'Bazzzz',
+                    false,
+                    true,
+                    1,
+                    20,
+                    17,
+                    19,
+                ),
+                new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_FUNCTION,
+                    'Bar\f1',
+                    'f1',
+                    false,
+                    true,
+                    22,
+                    43,
+                    26,
+                    28,
+                ),
+                new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_FUNCTION,
+                    'Bar\f3',
+                    'f3',
+                    false,
+                    true,
+                    22,
+                    43,
+                    33,
+                    35,
+                ),
+                new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_FUNCTION,
+                    'Bar\f5',
+                    'f5',
+                    false,
+                    true,
+                    22,
+                    43,
+                    40,
+                    42,
+                ),
+                new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_CONSTANT,
+                    'Buzz\C1',
+                    'C1',
+                    false,
+                    true,
+                    45,
+                    66,
+                    49,
+                    51,
+                ),
+                new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_CONSTANT,
+                    'Buzz\C3',
+                    'C3',
+                    false,
+                    true,
+                    45,
+                    66,
+                    56,
+                    58,
+                ),
+                new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_CONSTANT,
+                    'Buzz\C5',
+                    'C5',
+                    false,
+                    true,
+                    45,
+                    66,
+                    63,
+                    65,
+                ),
+            ],
+            true,
+        ];
+
+        yield 'multiple multi-imports with aliases' => [
+            <<<'PHP'
+                <?php
+                use Foo\Bar, Foo\Baz as Buzz;
+                use function Bar\f1, Bar\f2 as func2;
+                use const Buzz\C1, Buzz\C2 as CONST2;
+                PHP,
+            [
+                new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_CLASS,
                     'Foo\Bar',
                     'Bar',
                     false,
+                    true,
                     1,
-                    6,
-                    NamespaceUseAnalysis::TYPE_CLASS
+                    15,
+                    3,
+                    5,
                 ),
                 new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_CLASS,
+                    'Foo\Baz',
+                    'Buzz',
+                    true,
+                    true,
+                    1,
+                    15,
+                    8,
+                    14,
+                ),
+                new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_FUNCTION,
+                    'Bar\f1',
+                    'f1',
+                    false,
+                    true,
+                    17,
+                    33,
+                    21,
+                    23,
+                ),
+                new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_FUNCTION,
+                    'Bar\f2',
+                    'func2',
+                    true,
+                    true,
+                    17,
+                    33,
+                    26,
+                    32,
+                ),
+                new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_CONSTANT,
+                    'Buzz\C1',
+                    'C1',
+                    false,
+                    true,
+                    35,
+                    51,
+                    39,
+                    41,
+                ),
+                new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_CONSTANT,
+                    'Buzz\C2',
+                    'CONST2',
+                    true,
+                    true,
+                    35,
+                    51,
+                    44,
+                    50,
+                ),
+            ],
+            true,
+        ];
+
+        yield 'multiline grouped class import with trailing comma' => [
+            <<<'PHP'
+                <?php
+                use Foo\{
+                    Bar,
+                    Baz,
+                };
+                PHP,
+            [
+                new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_CLASS,
+                    'Foo\Bar',
+                    'Bar',
+                    false,
+                    true,
+                    1,
+                    14,
+                    7,
+                    7,
+                ),
+                new NamespaceUseAnalysis(
+                    NamespaceUseAnalysis::TYPE_CLASS,
                     'Foo\Baz',
                     'Baz',
                     false,
-                    8,
-                    13,
-                    NamespaceUseAnalysis::TYPE_CLASS
-                ),
-            ], [1, 8]],
-            ['<?php use \Foo\Bar;', [
-                new NamespaceUseAnalysis(
-                    '\Foo\Bar',
-                    'Bar',
-                    false,
-                    1,
-                    7,
-                    NamespaceUseAnalysis::TYPE_CLASS
-                ),
-            ], [1]],
-            ['<?php use Foo\Bar as Baz;', [
-                new NamespaceUseAnalysis(
-                    'Foo\Bar',
-                    'Baz',
                     true,
                     1,
+                    14,
                     10,
-                    NamespaceUseAnalysis::TYPE_CLASS
-                ),
-            ], [1]],
-            ['<?php use Foo\Bar as Baz; use Foo\Buz as Baz;', [
-                new NamespaceUseAnalysis(
-                    'Foo\Bar',
-                    'Baz',
-                    true,
-                    1,
                     10,
-                    NamespaceUseAnalysis::TYPE_CLASS
                 ),
-                new NamespaceUseAnalysis(
-                    'Foo\Buz',
-                    'Baz',
-                    true,
-                    12,
-                    21,
-                    NamespaceUseAnalysis::TYPE_CLASS
-                ),
-            ], [1, 12]],
-            ['<?php use function My\count;', [
-                new NamespaceUseAnalysis(
-                    'My\count',
-                    'count',
-                    false,
-                    1,
-                    8,
-                    NamespaceUseAnalysis::TYPE_FUNCTION
-                ),
-            ], [1]],
-            ['<?php use function My\count as myCount;', [
-                new NamespaceUseAnalysis(
-                    'My\count',
-                    'myCount',
-                    true,
-                    1,
-                    12,
-                    NamespaceUseAnalysis::TYPE_FUNCTION
-                ),
-            ], [1]],
-            ['<?php use const My\Full\CONSTANT;', [
-                new NamespaceUseAnalysis(
-                    'My\Full\CONSTANT',
-                    'CONSTANT',
-                    false,
-                    1,
-                    10,
-                    NamespaceUseAnalysis::TYPE_CONSTANT
-                ),
-            ], [1]],
+            ],
+            true,
+        ];
+    }
 
-            // TODO: How to support these:
+    /**
+     * @param list<NamespaceUseAnalysis> $expected
+     *
+     * @dataProvider provideGetDeclarationsInNamespaceCases
+     */
+    #[DataProvider('provideGetDeclarationsInNamespaceCases')]
+    public function testGetDeclarationsInNamespace(string $code, NamespaceAnalysis $namespace, array $expected): void
+    {
+        $tokens = Tokens::fromCode($code);
+        $analyzer = new NamespaceUsesAnalyzer();
 
-            // Multiple imports on one line:
-            // use My\Full\Classname as Another, My\Full\NSname;
+        self::assertSame(
+            serialize($expected),
+            serialize($analyzer->getDeclarationsInNamespace($tokens, $namespace)),
+        );
+    }
 
-            // PHP 7+ code
-            // use some\namespace\{ClassA, ClassB, ClassC as C};
-            // use function some\namespace\{fn_a, fn_b, fn_c};
-            // use const some\namespace\{ConstA, ConstB, ConstC};
+    /**
+     * @return iterable<int, array{0: string, 1: NamespaceAnalysis, 2: list<NamespaceUseAnalysis>}>
+     */
+    public static function provideGetDeclarationsInNamespaceCases(): iterable
+    {
+        yield [
+            '<?php
+                namespace Foo;
+                use Bar;
+                use Baz;',
+            new NamespaceAnalysis('Foo', 'Foo', 2, 5, 2, 15),
+            [
+                new NamespaceUseAnalysis(NamespaceUseAnalysis::TYPE_CLASS, 'Bar', 'Bar', false, false, 7, 10),
+                new NamespaceUseAnalysis(NamespaceUseAnalysis::TYPE_CLASS, 'Baz', 'Baz', false, false, 12, 15),
+            ],
+        ];
+
+        yield [
+            '<?php
+                namespace Foo1 {
+                    use Bar1;
+                    use Baz1;
+                }
+                namespace Foo2 {
+                    use Bar2;
+                    use Baz2;
+                }',
+            new NamespaceAnalysis('Foo1', 'Foo1', 2, 4, 2, 18),
+            [
+                new NamespaceUseAnalysis(NamespaceUseAnalysis::TYPE_CLASS, 'Bar1', 'Bar1', false, false, 8, 11),
+                new NamespaceUseAnalysis(NamespaceUseAnalysis::TYPE_CLASS, 'Baz1', 'Baz1', false, false, 13, 16),
+            ],
+        ];
+
+        yield [
+            '<?php
+                namespace Foo1 {
+                    use Bar1;
+                    use Baz1;
+                }
+                namespace Foo2 {
+                    use Bar2;
+                    use Baz2;
+                }',
+            new NamespaceAnalysis('Foo2', 'Foo2', 20, 22, 20, 36),
+            [
+                new NamespaceUseAnalysis(NamespaceUseAnalysis::TYPE_CLASS, 'Bar2', 'Bar2', false, false, 26, 29),
+                new NamespaceUseAnalysis(NamespaceUseAnalysis::TYPE_CLASS, 'Baz2', 'Baz2', false, false, 31, 34),
+            ],
         ];
     }
 }

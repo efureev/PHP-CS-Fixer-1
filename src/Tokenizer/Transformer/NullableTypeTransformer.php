@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,6 +16,7 @@ namespace PhpCsFixer\Tokenizer\Transformer;
 
 use PhpCsFixer\Tokenizer\AbstractTransformer;
 use PhpCsFixer\Tokenizer\CT;
+use PhpCsFixer\Tokenizer\FCT;
 use PhpCsFixer\Tokenizer\Token;
 use PhpCsFixer\Tokenizer\Tokens;
 
@@ -23,48 +26,75 @@ use PhpCsFixer\Tokenizer\Tokens;
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
  *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class NullableTypeTransformer extends AbstractTransformer
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function getCustomTokens()
-    {
-        return [CT::T_NULLABLE_TYPE];
-    }
+    private const TYPES = [
+        '(',
+        ',',
+        [CT::T_TYPE_COLON],
+        [CT::T_CONSTRUCTOR_PROPERTY_PROMOTION_PUBLIC],
+        [CT::T_CONSTRUCTOR_PROPERTY_PROMOTION_PROTECTED],
+        [CT::T_CONSTRUCTOR_PROPERTY_PROMOTION_PRIVATE],
+        [CT::T_ATTRIBUTE_CLOSE],
+        [\T_PRIVATE],
+        [\T_PROTECTED],
+        [\T_PUBLIC],
+        [\T_VAR],
+        [\T_STATIC],
+        [\T_CONST],
+        [\T_ABSTRACT],
+        [\T_FINAL],
+        [FCT::T_READONLY],
+        [FCT::T_PRIVATE_SET],
+        [FCT::T_PROTECTED_SET],
+        [FCT::T_PUBLIC_SET],
+    ];
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getPriority()
+    public function getPriority(): int
     {
         // needs to run after TypeColonTransformer
         return -20;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getRequiredPhpVersionId()
+    public function getRequiredPhpVersionId(): int
     {
-        return 70100;
+        return 7_01_00;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function process(Tokens $tokens, Token $token, $index)
+    public function isCandidate(Tokens $tokens): bool
     {
-        if (!$token->equals('?')) {
-            return;
-        }
+        return $tokens->isTokenKindFound('?');
+    }
 
-        $prevIndex = $tokens->getPrevMeaningfulToken($index);
-        $prevToken = $tokens[$prevIndex];
+    public function process(Tokens $tokens): void
+    {
+        foreach ($tokens as $index => $token) {
+            if (!$token->equals('?')) {
+                continue;
+            }
 
-        if ($prevToken->equalsAny(['(', ',', [CT::T_TYPE_COLON]])) {
+            $prevIndex = $tokens->getPrevMeaningfulToken($index);
+
+            if (!$tokens[$prevIndex]->equalsAny(self::TYPES)) {
+                continue;
+            }
+
+            if (
+                $tokens[$prevIndex]->isGivenKind(\T_STATIC)
+                && $tokens[$tokens->getPrevMeaningfulToken($prevIndex)]->isGivenKind(\T_INSTANCEOF)
+            ) {
+                continue;
+            }
+
             $tokens[$index] = new Token([CT::T_NULLABLE_TYPE, '?']);
         }
+    }
+
+    public function getCustomTokens(): array
+    {
+        return [CT::T_NULLABLE_TYPE];
     }
 }

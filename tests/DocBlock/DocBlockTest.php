@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,22 +16,25 @@ namespace PhpCsFixer\Tests\DocBlock;
 
 use PhpCsFixer\DocBlock\DocBlock;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Graham Campbell <graham@alt-three.com>
+ * @author Graham Campbell <hello@gjcampbell.co.uk>
  *
  * @internal
  *
  * @covers \PhpCsFixer\DocBlock\DocBlock
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(DocBlock::class)]
 final class DocBlockTest extends TestCase
 {
     /**
      * This represents the content an entire docblock.
-     *
-     * @var string
      */
-    private static $sample = '/**
+    private static string $sample = '/**
      * Test docblock.
      *
      * @param string $hello
@@ -45,59 +50,55 @@ final class DocBlockTest extends TestCase
      * @return void
      */';
 
-    public function testContent()
+    public function testContent(): void
     {
         $doc = new DocBlock(self::$sample);
 
-        $this->assertSame(self::$sample, $doc->getContent());
-        $this->assertSame(self::$sample, (string) $doc);
+        self::assertSame(self::$sample, $doc->getContent());
+        self::assertSame(self::$sample, (string) $doc);
     }
 
-    public function testEmptyContent()
+    public function testEmptyContent(): void
     {
         $doc = new DocBlock('');
 
-        $this->assertSame('', $doc->getContent());
+        self::assertSame('', $doc->getContent());
     }
 
-    public function testGetLines()
+    public function testGetLines(): void
     {
         $doc = new DocBlock(self::$sample);
+        $lines = $doc->getLines();
 
-        $this->assertInternalType('array', $doc->getLines());
-        $this->assertCount(15, $doc->getLines());
+        self::assertCount(15, $lines);
 
-        foreach ($doc->getLines() as $index => $line) {
-            $this->assertInstanceOf(\PhpCsFixer\DocBlock\Line::class, $line);
-            $this->assertSame($doc->getLine($index), $line);
+        foreach ($lines as $index => $line) {
+            self::assertSame($doc->getLine($index), $line);
         }
 
-        $this->assertEmpty($doc->getLine(15));
+        self::assertNull($doc->getLine(15));
     }
 
-    public function testGetAnnotations()
+    public function testGetAnnotations(): void
     {
         $doc = new DocBlock(self::$sample);
+        $annotations = $doc->getAnnotations();
 
-        $this->assertInternalType('array', $doc->getAnnotations());
-        $this->assertCount(5, $doc->getAnnotations());
+        self::assertCount(5, $annotations);
 
-        foreach ($doc->getAnnotations() as $index => $annotations) {
-            $this->assertInstanceOf(\PhpCsFixer\DocBlock\Annotation::class, $annotations);
-            $this->assertSame($doc->getAnnotation($index), $annotations);
+        foreach ($annotations as $index => $annotation) {
+            self::assertSame($doc->getAnnotation($index), $annotation);
         }
 
-        $this->assertEmpty($doc->getAnnotation(5));
+        self::assertNull($doc->getAnnotation(5));
     }
 
-    public function testGetAnnotationsOfTypeParam()
+    public function testGetAnnotationsOfTypeParam(): void
     {
         $doc = new DocBlock(self::$sample);
-
         $annotations = $doc->getAnnotationsOfType('param');
 
-        $this->assertInternalType('array', $annotations);
-        $this->assertCount(3, $annotations);
+        self::assertCount(3, $annotations);
 
         $first = '     * @param string $hello
 ';
@@ -107,50 +108,153 @@ final class DocBlockTest extends TestCase
         $third = '     * @param adkjbadjasbdand $asdnjkasd
 ';
 
-        $this->assertSame($first, $annotations[0]->getContent());
-        $this->assertSame($second, $annotations[1]->getContent());
-        $this->assertSame($third, $annotations[2]->getContent());
+        self::assertSame($first, $annotations[0]->getContent());
+        self::assertSame($second, $annotations[1]->getContent());
+        self::assertSame($third, $annotations[2]->getContent());
     }
 
-    public function testGetAnnotationsOfTypeThrows()
+    public function testGetAnnotationsOfTypeThrows(): void
     {
         $doc = new DocBlock(self::$sample);
-
         $annotations = $doc->getAnnotationsOfType('throws');
 
-        $this->assertInternalType('array', $annotations);
-        $this->assertCount(1, $annotations);
+        self::assertCount(1, $annotations);
 
         $content = '     * @throws \Exception asdnjkasd
      * asdasdasdasdasdasdasdasd
      * kasdkasdkbasdasdasdjhbasdhbasjdbjasbdjhb
 ';
 
-        $this->assertSame($content, $annotations[0]->getContent());
+        self::assertSame($content, $annotations[0]->getContent());
     }
 
-    public function testGetAnnotationsOfTypeReturn()
+    public function testGetAnnotationsOfTypeReturn(): void
     {
         $doc = new DocBlock(self::$sample);
-
         $annotations = $doc->getAnnotationsOfType('return');
 
-        $this->assertInternalType('array', $annotations);
-        $this->assertCount(1, $annotations);
+        self::assertCount(1, $annotations);
 
         $content = '     * @return void
 ';
 
-        $this->assertSame($content, $annotations[0]->getContent());
+        self::assertSame($content, $annotations[0]->getContent());
     }
 
-    public function testGetAnnotationsOfTypeFoo()
+    public function testGetAnnotationsOfTypeFoo(): void
+    {
+        $doc = new DocBlock(self::$sample);
+        $annotations = $doc->getAnnotationsOfType('foo');
+
+        self::assertCount(0, $annotations);
+    }
+
+    public function testIsMultiLine(): void
     {
         $doc = new DocBlock(self::$sample);
 
-        $annotations = $doc->getAnnotationsOfType('foo');
+        self::assertTrue($doc->isMultiLine());
+    }
 
-        $this->assertInternalType('array', $annotations);
-        $this->assertCount(0, $annotations);
+    /**
+     * @dataProvider provideMakeMultiLineCases
+     */
+    #[DataProvider('provideMakeMultiLineCases')]
+    public function testMakeMultiLine(string $inputDocBlock, ?string $outputDocBlock = null, string $indent = '', string $newLine = "\n"): void
+    {
+        $doc = new DocBlock($inputDocBlock);
+        $doc->makeMultiLine($indent, $newLine);
+
+        if (null === $outputDocBlock) {
+            $outputDocBlock = $inputDocBlock;
+        }
+
+        self::assertSame($outputDocBlock, $doc->getContent());
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1?: string, 2?: string, 3?: string}>
+     */
+    public static function provideMakeMultiLineCases(): iterable
+    {
+        yield 'It keeps a multi line doc block as is' => [
+            "/**\n * Hello\n */",
+        ];
+
+        yield 'It keeps a multi line doc block as is with multiple annotations' => [
+            "/**\n * @foo\n *@bar\n */",
+        ];
+
+        yield 'It keeps a multi line doc block with indentation' => [
+            "/**\n\t *@foo\n\t */",
+        ];
+
+        yield 'It Converts a single line to multi line with no indentation' => [
+            '/** Hello */',
+            "/**\n * Hello\n */",
+        ];
+
+        yield 'It Converts a single line to multi line with correct indentation' => [
+            '/** Hello */',
+            "/**\n     * Hello\n     */",
+            '    ',
+        ];
+
+        yield 'It Converts a single line to multi line with correct indentation and Line ending' => [
+            '/** Hello */',
+            "/**\r\n     * Hello\r\n     */",
+            '    ',
+            "\r\n",
+        ];
+    }
+
+    /**
+     * @dataProvider provideMakeSingleLineCases
+     */
+    #[DataProvider('provideMakeSingleLineCases')]
+    public function testMakeSingleLine(string $inputDocBlock, ?string $outputDocBlock = null): void
+    {
+        $doc = new DocBlock($inputDocBlock);
+        $doc->makeSingleLine();
+
+        if (null === $outputDocBlock) {
+            $outputDocBlock = $inputDocBlock;
+        }
+
+        self::assertSame($outputDocBlock, $doc->getContent());
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1?: string}>
+     */
+    public static function provideMakeSingleLineCases(): iterable
+    {
+        yield 'It keeps a single line doc block as is' => [
+            '/** Hello */',
+        ];
+
+        yield 'It converts a multi line doc block to a single line' => [
+            "/**\n * Hello\n */",
+            '/** Hello */',
+        ];
+
+        yield 'It converts a multi line doc block to a single line with annotation' => [
+            "/**\n * @foo\n */",
+            '/** @foo */',
+        ];
+
+        yield 'It converts a multi line doc block to a single line multiple empty lines' => [
+            "/**\n * @foo\n *\n *\n *\n * */",
+            '/** @foo */',
+        ];
+
+        yield 'It changes an empty doc block to single line' => [
+            "/**\n *\n */",
+            '/**  */',
+        ];
+
+        yield 'It does not change a multi line doc block if it can\'t' => [
+            self::$sample,
+        ];
     }
 }

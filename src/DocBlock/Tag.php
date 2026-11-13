@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -17,16 +19,17 @@ use PhpCsFixer\Preg;
 /**
  * This represents a tag, as defined by the proposed PSR PHPDoc standard.
  *
- * @author Graham Campbell <graham@alt-three.com>
+ * @author Graham Campbell <hello@gjcampbell.co.uk>
+ * @author Jakub Kwaśniewski <jakub@zero-85.pl>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
-class Tag
+final class Tag
 {
     /**
      * All the tags defined by the proposed PSR PHPDoc standard.
-     *
-     * @var string[]
      */
-    private static $tags = [
+    public const PSR_STANDARD_TAGS = [
         'api', 'author', 'category', 'copyright', 'deprecated', 'example',
         'global', 'internal', 'license', 'link', 'method', 'package', 'param',
         'property', 'property-read', 'property-write', 'return', 'see',
@@ -35,22 +38,16 @@ class Tag
 
     /**
      * The line containing the tag.
-     *
-     * @var Line
      */
-    private $line;
+    private Line $line;
 
     /**
      * The cached tag name.
-     *
-     * @var null|string
      */
-    private $name;
+    private ?string $name = null;
 
     /**
      * Create a new tag instance.
-     *
-     * @param Line $line
      */
     public function __construct(Line $line)
     {
@@ -61,10 +58,8 @@ class Tag
      * Get the tag name.
      *
      * This may be "param", or "return", etc.
-     *
-     * @return string
      */
-    public function getName()
+    public function getName(): string
     {
         if (null === $this->name) {
             Preg::matchAll('/@[a-zA-Z0-9_-]+(?=\s|$)/', $this->line->getContent(), $matches);
@@ -82,11 +77,9 @@ class Tag
     /**
      * Set the tag name.
      *
-     * This will also be persisted to the upsteam line and annotation.
-     *
-     * @param string $name
+     * This will also be persisted to the upstream line and annotation.
      */
-    public function setName($name)
+    public function setName(string $name): void
     {
         $current = $this->getName();
 
@@ -94,7 +87,7 @@ class Tag
             throw new \RuntimeException('Cannot set name on unknown tag.');
         }
 
-        $this->line->setContent(Preg::replace("/@${current}/", "@${name}", $this->line->getContent(), 1));
+        $this->line->setContent(Preg::replace("/@{$current}/", "@{$name}", $this->line->getContent(), 1));
 
         $this->name = $name;
     }
@@ -103,11 +96,9 @@ class Tag
      * Is the tag a known tag?
      *
      * This is defined by if it exists in the proposed PSR PHPDoc standard.
-     *
-     * @return bool
      */
-    public function valid()
+    public function valid(): bool
     {
-        return \in_array($this->getName(), self::$tags, true);
+        return \in_array($this->getName(), self::PSR_STANDARD_TAGS, true);
     }
 }

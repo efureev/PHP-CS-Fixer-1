@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,44 +14,53 @@
 
 namespace PhpCsFixer\Tests\Fixer\Phpdoc;
 
+use PhpCsFixer\Fixer\Phpdoc\PhpdocTrimFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Graham Campbell <graham@alt-three.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Phpdoc\PhpdocTrimFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Phpdoc\PhpdocTrimFixer>
+ *
+ * @author Graham Campbell <hello@gjcampbell.co.uk>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(PhpdocTrimFixer::class)]
 final class PhpdocTrimFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
-    {
-        return [
-            [
-                <<<'EOF'
-                <?php
     /**
-     * @param EngineInterface $templating
-     *
-     * @return void
+     * @return iterable<array{0: string, 1?: string}>
      */
+    public static function provideFixCases(): iterable
+    {
+        yield [
+            <<<'EOF'
+                                <?php
+                    /**
+                     * @param EngineInterface $templating
+                     *
+                     * @return void
+                     */
 
-EOF
-            ],
-            [
-                '<?php
+                EOF,
+        ];
+
+        yield [
+            '<?php
 
 /**
  * @return int количество деактивированных
@@ -58,198 +69,168 @@ function deactivateCompleted()
 {
     return 0;
 }',
-            ],
-            [
-                mb_convert_encoding('
+        ];
+
+        yield [
+            (string) mb_convert_encoding('
 <?php
 /**
  * Test à
  */
 function foo(){}
 ', 'Windows-1252', 'UTF-8'),
-            ],
         ];
-    }
 
-    public function testFixMore()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * Hello there!
-     * @internal
-     *@param string $foo
-     *@throws Exception
-     *
-    *
-     *
-     *  @return bool
-     */
+        yield [
+            <<<'EOF'
+                <?php
+                    /**
+                     * Hello there!
+                     * @internal
+                     *@param string $foo
+                     *@throws Exception
+                     *
+                    *
+                     *
+                     *  @return bool
+                     */
 
-EOF;
+                EOF,
+            <<<'EOF'
+                <?php
+                    /**
+                     *
+                  *
+                     * Hello there!
+                     * @internal
+                     *@param string $foo
+                     *@throws Exception
+                     *
+                    *
+                     *
+                     *  @return bool
+                     *
+                     *
+                     */
 
-        $input = <<<'EOF'
-<?php
-    /**
-     *
-  *
-     * Hello there!
-     * @internal
-     *@param string $foo
-     *@throws Exception
-     *
-    *
-     *
-     *  @return bool
-     *
-     *
-     */
+                EOF,
+        ];
 
-EOF;
+        yield [
+            <<<'EOF'
+                <?php
 
-        $this->doTest($expected, $input);
-    }
+                namespace Foo;
 
-    public function testClassDocBlock()
-    {
-        $expected = <<<'EOF'
-<?php
+                  /**
+                 * This is a class that does classy things.
+                 *
+                 * @internal
+                 *
+                 * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+                 * @author Graham Campbell <hello@gjcampbell.co.uk>
+                   */
+                class Bar {}
 
-namespace Foo;
+                EOF,
+            <<<'EOF'
+                <?php
 
-  /**
- * This is a class that does classy things.
- *
- * @internal
- *
- * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
- * @author Graham Campbell <graham@alt-three.com>
-   */
-class Bar {}
+                namespace Foo;
 
-EOF;
+                  /**
+                   *
+                 *
+                 * This is a class that does classy things.
+                 *
+                 * @internal
+                 *
+                 * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+                 * @author Graham Campbell <hello@gjcampbell.co.uk>
+                 *
+                    *
+                  *
+                   */
+                class Bar {}
 
-        $input = <<<'EOF'
-<?php
+                EOF,
+        ];
 
-namespace Foo;
+        yield 'empty doc block' => [<<<'EOF'
+            <?php
+                /**
+                 *
+                 */
 
-  /**
-   *
- *
- * This is a class that does classy things.
- *
- * @internal
- *
- * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
- * @author Graham Campbell <graham@alt-three.com>
- *
-    *
-  *
-   */
-class Bar {}
+            EOF];
 
-EOF;
+        yield 'empty larger doc block' => [
+            <<<'EOF'
+                <?php
+                    /**
+                     *
+                     */
 
-        $this->doTest($expected, $input);
-    }
+                EOF,
+            <<<'EOF'
+                <?php
+                    /**
+                     *
+                     *
+                     *
+                     *
+                     */
 
-    public function testEmptyDocBlock()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     *
-     */
+                EOF,
+        ];
 
-EOF;
+        yield 'super simple doc block start' => [
+            <<<'EOF'
+                <?php
+                    /**
+                     * Test.
+                     */
 
-        $this->doTest($expected);
-    }
+                EOF,
+            <<<'EOF'
+                <?php
+                    /**
+                     *
+                     * Test.
+                     */
 
-    public function testEmptyLargerEmptyDocBlock()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     *
-     */
+                EOF,
+        ];
 
-EOF;
+        yield 'super simple doc block end' => [
+            <<<'EOF'
+                <?php
+                    /**
+                     * Test.
+                     */
 
-        $input = <<<'EOF'
-<?php
-    /**
-     *
-     *
-     *
-     *
-     */
+                EOF,
+            <<<'EOF'
+                <?php
+                    /**
+                     * Test.
+                     *
+                     */
 
-EOF;
+                EOF,
+        ];
 
-        $this->doTest($expected, $input);
-    }
+        yield 'with lines without asterisk' => [<<<'EOF'
+            <?php
 
-    public function testSuperSimpleDocBlockStart()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * Test.
-     */
+            /**
+             * Foo
+                  Baz
+             */
+            class Foo
+            {
+            }
 
-EOF;
-
-        $input = <<<'EOF'
-<?php
-    /**
-     *
-     * Test.
-     */
-
-EOF;
-
-        $this->doTest($expected, $input);
-    }
-
-    public function testSuperSimpleDocBlockEnd()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * Test.
-     */
-
-EOF;
-
-        $input = <<<'EOF'
-<?php
-    /**
-     * Test.
-     *
-     */
-
-EOF;
-
-        $this->doTest($expected, $input);
-    }
-
-    public function testWithLinesWithoutAsterisk()
-    {
-        $expected = <<<'EOF'
-<?php
-
-/**
- * Foo
-      Baz
- */
-class Foo
-{
-}
-
-EOF;
-
-        $this->doTest($expected);
+            EOF];
     }
 }

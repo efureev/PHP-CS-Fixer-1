@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -23,39 +25,39 @@ use PhpCsFixer\Tokenizer\Tokens;
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
  *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class ArrayTypehintTransformer extends AbstractTransformer
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function getCustomTokens()
+    public function getRequiredPhpVersionId(): int
+    {
+        return 5_00_00;
+    }
+
+    public function isCandidate(Tokens $tokens): bool
+    {
+        return $tokens->isTokenKindFound(\T_ARRAY);
+    }
+
+    public function process(Tokens $tokens): void
+    {
+        foreach ($tokens as $index => $token) {
+            if (!$token->isGivenKind(\T_ARRAY)) {
+                continue;
+            }
+
+            $nextIndex = $tokens->getNextMeaningfulToken($index);
+            $nextToken = $tokens[$nextIndex];
+
+            if (!$nextToken->equals('(')) {
+                $tokens[$index] = new Token([CT::T_ARRAY_TYPEHINT, $token->getContent()]);
+            }
+        }
+    }
+
+    public function getCustomTokens(): array
     {
         return [CT::T_ARRAY_TYPEHINT];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getRequiredPhpVersionId()
-    {
-        return 50000;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function process(Tokens $tokens, Token $token, $index)
-    {
-        if (!$token->isGivenKind(T_ARRAY)) {
-            return;
-        }
-
-        $nextIndex = $tokens->getNextMeaningfulToken($index);
-        $nextToken = $tokens[$nextIndex];
-
-        if (!$nextToken->equals('(')) {
-            $tokens[$index] = new Token([CT::T_ARRAY_TYPEHINT, $token->getContent()]);
-        }
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -15,90 +17,111 @@ namespace PhpCsFixer\Tests\Error;
 use PhpCsFixer\Error\Error;
 use PhpCsFixer\Error\ErrorsManager;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @internal
  *
  * @covers \PhpCsFixer\Error\ErrorsManager
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(ErrorsManager::class)]
 final class ErrorsManagerTest extends TestCase
 {
-    public function testDefaults()
+    public function testDefaults(): void
     {
         $errorsManager = new ErrorsManager();
 
-        $this->assertTrue($errorsManager->isEmpty());
-        $this->assertEmpty($errorsManager->getInvalidErrors());
-        $this->assertEmpty($errorsManager->getExceptionErrors());
-        $this->assertEmpty($errorsManager->getLintErrors());
+        self::assertTrue($errorsManager->isEmpty());
+        self::assertCount(0, $errorsManager->getInvalidErrors());
+        self::assertCount(0, $errorsManager->getExceptionErrors());
+        self::assertCount(0, $errorsManager->getLintErrors());
     }
 
-    public function testThatCanReportAndRetrieveInvalidErrors()
+    public function testThatCanReportAndRetrieveInvalidErrors(): void
     {
         $error = new Error(
             Error::TYPE_INVALID,
-            'foo.php'
+            'foo.php',
         );
 
         $errorsManager = new ErrorsManager();
 
         $errorsManager->report($error);
 
-        $this->assertFalse($errorsManager->isEmpty());
+        self::assertFalse($errorsManager->isEmpty());
 
         $errors = $errorsManager->getInvalidErrors();
 
-        $this->assertInternalType('array', $errors);
-        $this->assertCount(1, $errors);
-        $this->assertSame($error, array_shift($errors));
+        self::assertCount(1, $errors);
+        self::assertSame($error, array_shift($errors));
 
-        $this->assertCount(0, $errorsManager->getExceptionErrors());
-        $this->assertCount(0, $errorsManager->getLintErrors());
+        self::assertCount(0, $errorsManager->getExceptionErrors());
+        self::assertCount(0, $errorsManager->getLintErrors());
     }
 
-    public function testThatCanReportAndRetrieveExceptionErrors()
+    public function testThatCanReportAndRetrieveExceptionErrors(): void
     {
         $error = new Error(
             Error::TYPE_EXCEPTION,
-            'foo.php'
+            'foo.php',
         );
 
         $errorsManager = new ErrorsManager();
 
         $errorsManager->report($error);
 
-        $this->assertFalse($errorsManager->isEmpty());
+        self::assertFalse($errorsManager->isEmpty());
 
         $errors = $errorsManager->getExceptionErrors();
 
-        $this->assertInternalType('array', $errors);
-        $this->assertCount(1, $errors);
-        $this->assertSame($error, array_shift($errors));
+        self::assertCount(1, $errors);
+        self::assertSame($error, array_shift($errors));
 
-        $this->assertCount(0, $errorsManager->getInvalidErrors());
-        $this->assertCount(0, $errorsManager->getLintErrors());
+        self::assertCount(0, $errorsManager->getInvalidErrors());
+        self::assertCount(0, $errorsManager->getLintErrors());
     }
 
-    public function testThatCanReportAndRetrieveInvalidFileErrors()
+    public function testThatCanReportAndRetrieveInvalidFileErrors(): void
     {
         $error = new Error(
             Error::TYPE_LINT,
-            'foo.php'
+            'foo.php',
         );
 
         $errorsManager = new ErrorsManager();
 
         $errorsManager->report($error);
 
-        $this->assertFalse($errorsManager->isEmpty());
+        self::assertFalse($errorsManager->isEmpty());
 
         $errors = $errorsManager->getLintErrors();
 
-        $this->assertInternalType('array', $errors);
-        $this->assertCount(1, $errors);
-        $this->assertSame($error, array_shift($errors));
+        self::assertCount(1, $errors);
+        self::assertSame($error, array_shift($errors));
 
-        $this->assertCount(0, $errorsManager->getInvalidErrors());
-        $this->assertCount(0, $errorsManager->getExceptionErrors());
+        self::assertCount(0, $errorsManager->getInvalidErrors());
+        self::assertCount(0, $errorsManager->getExceptionErrors());
+    }
+
+    public function testThatCanReportAndRetrieveErrorsForSpecificPath(): void
+    {
+        $errorsManager = new ErrorsManager();
+
+        // All kind of errors for the same path
+        $errorsManager->report(new Error(Error::TYPE_LINT, 'foo.php'));
+        $errorsManager->report(new Error(Error::TYPE_EXCEPTION, 'foo.php'));
+        $errorsManager->report(new Error(Error::TYPE_INVALID, 'foo.php'));
+
+        // Additional errors for a different path
+        $errorsManager->report(new Error(Error::TYPE_INVALID, 'bar.php'));
+        $errorsManager->report(new Error(Error::TYPE_LINT, 'baz.php'));
+
+        self::assertFalse($errorsManager->isEmpty());
+
+        $errors = $errorsManager->forPath('foo.php');
+
+        self::assertCount(3, $errors);
     }
 }

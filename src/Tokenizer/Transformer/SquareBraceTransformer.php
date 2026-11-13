@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -21,113 +23,114 @@ use PhpCsFixer\Tokenizer\Tokens;
  * Transform discriminate overloaded square braces tokens.
  *
  * Performed transformations:
- * - in `[1, 2, 3]` into CT::T_ARRAY_SQUARE_BRACE_OPEN and CT::T_ARRAY_SQUARE_BRACE_CLOSE,
- * - in `[$a, $b, $c] = array(1, 2, 3)` into CT::T_DESTRUCTURING_SQUARE_BRACE_OPEN and CT::T_DESTRUCTURING_SQUARE_BRACE_CLOSE.
+ * - in `[1, 2, 3]` into CT::T_ARRAY_BRACKET_OPEN and CT::T_ARRAY_BRACKET_CLOSE,
+ * - in `[$a, &$b, [$c]] = array(1, 2, array(3))` into CT::T_DESTRUCTURING_BRACKET_OPEN and CT::T_DESTRUCTURING_BRACKET_CLOSE.
  *
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
- * @author SpacePossum
  *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class SquareBraceTransformer extends AbstractTransformer
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function getCustomTokens()
+    public function getPriority(): int
     {
-        return [
-            CT::T_ARRAY_SQUARE_BRACE_OPEN,
-            CT::T_ARRAY_SQUARE_BRACE_CLOSE,
-            CT::T_DESTRUCTURING_SQUARE_BRACE_OPEN,
-            CT::T_DESTRUCTURING_SQUARE_BRACE_CLOSE,
-        ];
+        // must run after CurlyBraceTransformer and AttributeTransformer
+        return -1;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getRequiredPhpVersionId()
+    public function getRequiredPhpVersionId(): int
     {
         // Short array syntax was introduced in PHP 5.4, but the fixer is smart
         // enough to handle it even before 5.4.
         // Same for array destructing syntax sugar `[` introduced in PHP 7.1.
-        return 50000;
+        return 5_00_00;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function process(Tokens $tokens, Token $token, $index)
+    public function isCandidate(Tokens $tokens): bool
     {
-        if ($this->isArrayDestructing($tokens, $index)) {
-            $this->transformIntoDestructuringSquareBrace($tokens, $index);
+        return $tokens->isTokenKindFound('[');
+    }
 
-            return;
+    public function process(Tokens $tokens): void
+    {
+        foreach ($tokens as $index => $token) {
+            if (!$tokens[$index]->equals('[')) {
+                continue;
+            }
+
+            if ($this->isArrayDestructing($tokens, $index)) {
+                $this->transformIntoDestructuringSquareBrace($tokens, $index);
+            } elseif ($this->isShortArray($tokens, $index)) {
+                $this->transformIntoArraySquareBrace($tokens, $index);
+            }
         }
+    }
 
-        if ($this->isShortArray($tokens, $index)) {
-            $this->transformIntoArraySquareBrace($tokens, $index);
+    public function getCustomTokens(): array
+    {
+        return [
+            CT::T_ARRAY_BRACKET_OPEN,
+            CT::T_ARRAY_BRACKET_CLOSE,
+            CT::T_DESTRUCTURING_BRACKET_OPEN,
+            CT::T_DESTRUCTURING_BRACKET_CLOSE,
+        ];
+    }
+
+    private function transformIntoArraySquareBrace(Tokens $tokens, int $index): void
+    {
+        $endIndex = $tokens->findBlockEnd(Tokens::BLOCK_TYPE_INDEX_BRACKET, $index);
+
+        $tokens[$index] = new Token([CT::T_ARRAY_BRACKET_OPEN, '[']);
+        $tokens[$endIndex] = new Token([CT::T_ARRAY_BRACKET_CLOSE, ']']);
+    }
+
+    private function transformIntoDestructuringSquareBrace(Tokens $tokens, int $index): void
+    {
+        $endIndex = $tokens->findBlockEnd(Tokens::BLOCK_TYPE_INDEX_BRACKET, $index);
+
+        $tokens[$index] = new Token([CT::T_DESTRUCTURING_BRACKET_OPEN, '[']);
+        $tokens[$endIndex] = new Token([CT::T_DESTRUCTURING_BRACKET_CLOSE, ']']);
+
+        $previousMeaningfulIndex = $index;
+        $index = $tokens->getNextMeaningfulToken($index);
+
+        while ($index < $endIndex) {
+            if ($tokens[$index]->equals('[') && $tokens[$previousMeaningfulIndex]->equalsAny([[CT::T_DESTRUCTURING_BRACKET_OPEN], ','])) {
+                $tokens[$tokens->findBlockEnd(Tokens::BLOCK_TYPE_INDEX_BRACKET, $index)] = new Token([CT::T_DESTRUCTURING_BRACKET_CLOSE, ']']);
+                $tokens[$index] = new Token([CT::T_DESTRUCTURING_BRACKET_OPEN, '[']);
+            }
+
+            $previousMeaningfulIndex = $index;
+            $index = $tokens->getNextMeaningfulToken($index);
         }
-    }
-
-    /**
-     * @param Tokens $tokens
-     * @param int    $index
-     */
-    private function transformIntoArraySquareBrace(Tokens $tokens, $index)
-    {
-        $endIndex = $tokens->findBlockEnd(Tokens::BLOCK_TYPE_INDEX_SQUARE_BRACE, $index);
-
-        $tokens[$index] = new Token([CT::T_ARRAY_SQUARE_BRACE_OPEN, '[']);
-        $tokens[$endIndex] = new Token([CT::T_ARRAY_SQUARE_BRACE_CLOSE, ']']);
-    }
-
-    /**
-     * @param Tokens $tokens
-     * @param int    $index
-     */
-    private function transformIntoDestructuringSquareBrace(Tokens $tokens, $index)
-    {
-        $endIndex = $tokens->findBlockEnd(Tokens::BLOCK_TYPE_INDEX_SQUARE_BRACE, $index);
-
-        $tokens[$index] = new Token([CT::T_DESTRUCTURING_SQUARE_BRACE_OPEN, '[']);
-        $tokens[$endIndex] = new Token([CT::T_DESTRUCTURING_SQUARE_BRACE_CLOSE, ']']);
     }
 
     /**
      * Check if token under given index is short array opening.
-     *
-     * @param Tokens $tokens
-     * @param int    $index
-     *
-     * @return bool
      */
-    private function isShortArray(Tokens $tokens, $index)
+    private function isShortArray(Tokens $tokens, int $index): bool
     {
-        static $disallowedPrevTokens = [
-            ')',
-            ']',
-            '}',
-            '"',
-            [T_CONSTANT_ENCAPSED_STRING],
-            [T_STRING],
-            [T_STRING_VARNAME],
-            [T_VARIABLE],
-            [CT::T_ARRAY_SQUARE_BRACE_CLOSE],
-            [CT::T_DYNAMIC_PROP_BRACE_CLOSE],
-            [CT::T_DYNAMIC_VAR_BRACE_CLOSE],
-            [CT::T_ARRAY_INDEX_CURLY_BRACE_CLOSE],
-        ];
-
-        $token = $tokens[$index];
-
-        if (!$token->equals('[')) {
+        if (!$tokens[$index]->equals('[')) {
             return false;
         }
 
         $prevToken = $tokens[$tokens->getPrevMeaningfulToken($index)];
-        if ($prevToken->equalsAny($disallowedPrevTokens)) {
+        if ($prevToken->equalsAny([
+            ')',
+            ']',
+            '}',
+            '"',
+            [\T_CONSTANT_ENCAPSED_STRING],
+            [\T_STRING],
+            [\T_STRING_VARNAME],
+            [\T_VARIABLE],
+            [CT::T_ARRAY_BRACKET_CLOSE],
+            [CT::T_DYNAMIC_PROP_BRACE_CLOSE],
+            [CT::T_DYNAMIC_VAR_BRACE_CLOSE],
+            [CT::T_ARRAY_INDEX_BRACE_CLOSE],
+        ])) {
             return false;
         }
 
@@ -139,35 +142,44 @@ final class SquareBraceTransformer extends AbstractTransformer
         return !$this->isArrayDestructing($tokens, $index);
     }
 
-    /**
-     * @param Tokens $tokens
-     * @param int    $index
-     *
-     * @return bool
-     */
-    private function isArrayDestructing(Tokens $tokens, $index)
+    private function isArrayDestructing(Tokens $tokens, int $index): bool
     {
-        if (\PHP_VERSION_ID < 70100 || !$tokens[$index]->equals('[')) {
+        if (!$tokens[$index]->equals('[')) {
             return false;
         }
 
-        static $disallowedPrevTokens = [
+        $prevIndex = $tokens->getPrevMeaningfulToken($index);
+        $prevToken = $tokens[$prevIndex];
+        if ($prevToken->equalsAny([
             ')',
             ']',
             '"',
-            [T_CONSTANT_ENCAPSED_STRING],
-            [T_STRING],
-            [T_STRING_VARNAME],
-            [T_VARIABLE],
-            [CT::T_ARRAY_SQUARE_BRACE_CLOSE],
+            [\T_CONSTANT_ENCAPSED_STRING],
+            [\T_STRING],
+            [\T_STRING_VARNAME],
+            [\T_VARIABLE],
+            [CT::T_ARRAY_BRACKET_CLOSE],
             [CT::T_DYNAMIC_PROP_BRACE_CLOSE],
             [CT::T_DYNAMIC_VAR_BRACE_CLOSE],
-            [CT::T_ARRAY_INDEX_CURLY_BRACE_CLOSE],
-        ];
-
-        $prevToken = $tokens[$tokens->getPrevMeaningfulToken($index)];
-        if ($prevToken->equalsAny($disallowedPrevTokens)) {
+            [CT::T_ARRAY_INDEX_BRACE_CLOSE],
+        ])) {
             return false;
+        }
+
+        if ($prevToken->isGivenKind(\T_AS)) {
+            return true;
+        }
+
+        if ($prevToken->isGivenKind(\T_DOUBLE_ARROW)) {
+            $variableIndex = $tokens->getPrevMeaningfulToken($prevIndex);
+            if (!$tokens[$variableIndex]->isGivenKind(\T_VARIABLE)) {
+                return false;
+            }
+
+            $prevVariableIndex = $tokens->getPrevMeaningfulToken($variableIndex);
+            if ($tokens[$prevVariableIndex]->isGivenKind(\T_AS)) {
+                return true;
+            }
         }
 
         $type = Tokens::detectBlockType($tokens[$index]);

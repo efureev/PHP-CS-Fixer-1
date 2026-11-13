@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,82 +14,105 @@
 
 namespace PhpCsFixer\Tests\Fixer\PhpTag;
 
+use PhpCsFixer\Fixer\PhpTag\FullOpeningTagFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\PhpTag\FullOpeningTagFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\PhpTag\FullOpeningTagFixer>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(FullOpeningTagFixer::class)]
 final class FullOpeningTagFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            ['<?php echo \'Foo\';', '<? echo \'Foo\';'],
-            ['<?php echo \'Foo\';', '<?pHp echo \'Foo\';'],
-            ['<?= \'Foo\';'],
-            ['<?php echo \'Foo\'; ?> PLAIN TEXT'],
-            ['PLAIN TEXT<?php echo \'Foo\'; ?>'],
-            ['<?php $query = "SELECT .... FROM my_table WHERE id <? LIMIT 1";', '<? $query = "SELECT .... FROM my_table WHERE id <? LIMIT 1";'],
-            ['<?php
+        yield ['<?php echo \'Foo\';', '<? echo \'Foo\';'];
+
+        yield ['<?php echo \'Foo\';', '<?pHp echo \'Foo\';'];
+
+        yield ['<?= \'Foo\';'];
+
+        yield ['<?php echo \'Foo\'; ?> PLAIN TEXT'];
+
+        yield ['PLAIN TEXT<?php echo \'Foo\'; ?>'];
+
+        yield ['<?php $query = "SELECT .... FROM my_table WHERE id <? LIMIT 1";', '<? $query = "SELECT .... FROM my_table WHERE id <? LIMIT 1";'];
+
+        yield ['<?php
 
 echo \'Foo\';
 
 ',
-                '<?
+            '<?
 
 echo \'Foo\';
 
 ',
-            ],
-            [
-                "<?php if ('<?php' === '<?') { }",
-                "<? if ('<?php' === '<?') { }",
-            ],
-            [
-                '<?php // <?php',
-                '<?pHP // <?php',
-            ],
-            [
-                "<?php
+        ];
+
+        yield [
+            "<?php if ('<?php' === '<?') { }",
+            "<? if ('<?php' === '<?') { }",
+        ];
+
+        yield [
+            '<?php // <?php',
+            '<?pHP // <?php',
+        ];
+
+        yield [
+            "<?php
 '<?
 ';",
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 // Replace all <? with <?php !',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 // Replace all <? with <?pHp !',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 /**
  * Convert <?= ?> to long-form <?php echo ?> and <?php ?> to <?php ?>
  *
  */',
-            ],
-            [
-                "<?php \$this->data = preg_replace('/<\\?(?!xml|php)/s', '<?php ',       \$this->data);",
-            ],
-            [
-                'foo <?php  echo "-"; echo "aaa <?php bbb <? ccc"; echo \'<? \'; /* <? */ /** <? */ ?> bar <?php echo "<? ";',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            "<?php \$this->data = preg_replace('/<\\?(?!xml|php)/s', '<?php ',       \$this->data);",
+        ];
+
+        yield [
+            'foo <?php  echo "-"; echo "aaa <?php bbb <? ccc"; echo \'<? \'; /* <? */ /** <? */ ?> bar <?php echo "<? ";',
+        ];
+
+        yield [
+            '<?php
 $a = <<<           "TEST"
 <?Php <?
 TEST;?>
@@ -101,29 +126,24 @@ TEST;
 
 ?>
 ',
-            ],
         ];
-    }
 
-    /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideFixLT70Cases
-     * @requires PHP <7.0
-     */
-    public function testFixLT70($expected, $input = null)
-    {
-        $this->doTest($expected, $input);
-    }
+        yield 'binary string' => [
+            '<?php echo b\'Foo\';',
+            '<? echo b\'Foo\';',
+        ];
 
-    public function provideFixLT70Cases()
-    {
-        return [
-            [
-                'foo <?php  echo "-"; echo "aaa <? bbb <? ccc"; echo \'<? \'; /* <? */ /** <? */ ?> bar <?php echo "<? ";',
-                'foo <?  echo "-"; echo "aaa <? bbb <? ccc"; echo \'<? \'; /* <? */ /** <? */ ?> bar <? echo "<? ";',
-            ],
+        yield ['<?php', '<?'];
+
+        yield ["<?php\n", "<?\n"];
+
+        yield ["<?php    \n", "<?    \n"];
+
+        yield ["<?php    \n?><?= 1?>", "<?    \n?><?= 1?>"];
+
+        yield [
+            'foo <?php  echo "-"; echo "aaa <? bbb <? ccc"; echo \'<? \'; /* <? */ /** <? */ ?> bar <?php echo "<? ";',
+            'foo <?  echo "-"; echo "aaa <? bbb <? ccc"; echo \'<? \'; /* <? */ /** <? */ ?> bar <? echo "<? ";',
         ];
     }
 }

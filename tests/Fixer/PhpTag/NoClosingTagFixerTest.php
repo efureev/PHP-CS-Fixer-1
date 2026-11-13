@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,167 +14,190 @@
 
 namespace PhpCsFixer\Tests\Fixer\PhpTag;
 
+use PhpCsFixer\Fixer\PhpTag\NoClosingTagFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\PhpTag\NoClosingTagFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\PhpTag\NoClosingTagFixer>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NoClosingTagFixer::class)]
 final class NoClosingTagFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideWithFullOpenTagCases
+     * @dataProvider provideFixCases
      */
-    public function testWithFullOpenTag($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
+     * @return iterable<array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
+    {
+        yield [
+            '<?php echo \'Foo\';',
+            '<?php echo \'Foo\'; ?>',
+        ];
+
+        yield [
+            '<?php echo \'Foo\';',
+            '<?php echo \'Foo\';?>',
+        ];
+
+        yield [
+            '<?php echo \'Foo\'; ?> PLAIN TEXT',
+        ];
+
+        yield [
+            'PLAIN TEXT<?php echo \'Foo\'; ?>',
+        ];
+
+        yield [
+            '<?php
+
+echo \'Foo\';',
+            '<?php
+
+echo \'Foo\';
+
+?>',
+        ];
+
+        yield [
+            '<?php echo \'Foo\'; ?>
+<p><?php echo \'this is a template\'; ?></p>
+<?php echo \'Foo\'; ?>',
+        ];
+
+        yield [
+            '<?php echo "foo";',
+            '<?php echo "foo" ?>',
+        ];
+
+        yield [
+            '<?php
+class foo
+{
+    public function bar()
+    {
+        echo "Here I am!";
+    }
+}',
+            '<?php
+class foo
+{
+    public function bar()
+    {
+        echo "Here I am!";
+    }
+}?>',
+        ];
+
+        yield [
+            '<?php
+function bar()
+{
+    echo "Here I am!";
+}',
+            '<?php
+function bar()
+{
+    echo "Here I am!";
+}?>',
+        ];
+
+        yield [
+            '<?php
+if (true) {
+    echo "Here I am!";
+}',
+            '<?php
+if (true) {
+    echo "Here I am!";
+}?>',
+        ];
+
+        yield 'Trailing linebreak, priority issue with SingleBlankLineAtEofFixer.' => [
+            '<?php echo 1;',
+            "<?php echo 1;\n?>\n",
+        ];
+
+        yield 'Trailing comment.' => [
+            '<?php echo 1;// test',
+            "<?php echo 1;// test\n?>",
+        ];
+
+        yield 'No code' => [
+            '<?php ',
+            '<?php ?>',
+        ];
+
+        yield 'No code, only comment' => [
+            '<?php /* license */',
+            '<?php /* license */ ?>',
+        ];
+
+        yield [
+            '<?php ?>aa',
+        ];
+    }
+
+    /**
      * @dataProvider provideWithShortOpenTagCases
      */
-    public function testWithShortOpenTag($expected, $input = null)
+    #[DataProvider('provideWithShortOpenTagCases')]
+    public function testWithShortOpenTag(string $expected, ?string $input = null): void
     {
-        if (!ini_get('short_open_tag')) {
-            $this->markTestSkipped('The short_open_tag option is required to be enabled.');
-
-            return;
+        if ('1' !== \ini_get('short_open_tag')) {
+            self::markTestSkipped('The short_open_tag option is required to be enabled.');
         }
 
         $this->doTest($expected, $input);
     }
 
-    public function provideWithFullOpenTagCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideWithShortOpenTagCases(): iterable
     {
-        return [
-            [
-                '<?php echo \'Foo\';',
-                '<?php echo \'Foo\'; ?>',
-            ],
-            [
-                '<?php echo \'Foo\';',
-                '<?php echo \'Foo\';?>',
-            ],
-            [
-                '<?php echo \'Foo\'; ?> PLAIN TEXT',
-            ],
-            [
-                'PLAIN TEXT<?php echo \'Foo\'; ?>',
-            ],
-            [
-                '<?php
-
-echo \'Foo\';',
-                '<?php
-
-echo \'Foo\';
-
-?>',
-            ],
-            [
-                '<?php echo \'Foo\'; ?>
-<p><?php echo \'this is a template\'; ?></p>
-<?php echo \'Foo\'; ?>',
-            ],
-            [
-                '<?php echo "foo";',
-                '<?php echo "foo" ?>',
-            ],
-            [
-                '<?php
-class foo
-{
-    public function bar()
-    {
-        echo "Here I am!";
-    }
-}',
-                '<?php
-class foo
-{
-    public function bar()
-    {
-        echo "Here I am!";
-    }
-}?>',
-            ],
-            [
-                '<?php
-function bar()
-{
-    echo "Here I am!";
-}',
-                '<?php
-function bar()
-{
-    echo "Here I am!";
-}?>',
-            ],
-            [
-                '<?php
-if (true) {
-    echo "Here I am!";
-}',
-                '<?php
-if (true) {
-    echo "Here I am!";
-}?>',
-            ],
-            'Trailing linebreak, priority issue with SingleBlankLineAtEofFixer.' => [
-                '<?php echo 1;',
-                "<?php echo 1;\n?>\n",
-            ],
-            'Trailing comment.' => [
-                '<?php echo 1;// test',
-                "<?php echo 1;// test\n?>",
-            ],
-            'No code' => [
-                '<?php ',
-                '<?php ?>',
-            ],
-            'No code, only comment' => [
-                '<?php /* license */',
-                '<?php /* license */ ?>',
-            ],
-            [
-                '<?php ?>aa',
-            ],
+        yield [
+            '<? echo \'Foo\';',
+            '<? echo \'Foo\'; ?>',
         ];
-    }
 
-    public function provideWithShortOpenTagCases()
-    {
-        return [
-            [
-                '<? echo \'Foo\';',
-                '<? echo \'Foo\'; ?>',
-            ],
-            [
-                '<? echo \'Foo\';',
-                '<? echo \'Foo\';?>',
-            ],
-            [
-                '<? echo \'Foo\'; ?>
+        yield [
+            '<? echo \'Foo\';',
+            '<? echo \'Foo\';?>',
+        ];
+
+        yield [
+            '<? echo \'Foo\'; ?>
 <p><? echo \'this is a template\'; ?></p>
 <? echo \'Foo\'; ?>',
-            ],
-            [
-                '<? /**/', '<? /**/?>',
-            ],
-            [
-                '<?= "somestring"; ?> <?= "anotherstring"; ?>',
-            ],
-            [
-                '<?= 1;',
-                '<?= 1; ?>',
-            ],
+        ];
+
+        yield [
+            '<? /**/', '<? /**/?>',
+        ];
+
+        yield [
+            '<?= "somestring"; ?> <?= "anotherstring"; ?>',
+        ];
+
+        yield [
+            '<?= 1;',
+            '<?= 1; ?>',
         ];
     }
 }

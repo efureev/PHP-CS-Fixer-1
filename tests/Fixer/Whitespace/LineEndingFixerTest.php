@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,114 +14,128 @@
 
 namespace PhpCsFixer\Tests\Fixer\Whitespace;
 
+use PhpCsFixer\Fixer\Whitespace\LineEndingFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
 use PhpCsFixer\WhitespacesFixerConfig;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
- * @author SpacePossum
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Whitespace\LineEndingFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Whitespace\LineEndingFixer>
+ *
+ * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(LineEndingFixer::class)]
 final class LineEndingFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        $cases = $this->provideCommonCases();
+        yield from self::provideCommonCases();
 
-        $cases[] = [
+        yield [
             "<?php \$b = \" \$a \r\n 123\"; \$a = <<<TEST\nAAAAA \n |\nTEST;\n",
             "<?php \$b = \" \$a \r\n 123\"; \$a = <<<TEST\r\nAAAAA \r\n |\r\nTEST;\n", // both cases
         ];
 
-        $cases[] = [
+        yield [
             "<?php \$b = \" \$a \r\n 123\"; \$a = <<<TEST\nAAAAA \n |\nTEST;\n",
             "<?php \$b = \" \$a \r\n 123\"; \$a = <<<TEST\r\nAAAAA \n |\r\nTEST;\r\n", // both cases
         ];
 
-        // !T_INLINE_HTML
-        $cases[] = [
-            "<?php ?>\r\n<?php ?>\r\n",
+        yield 'T_INLINE_HTML' => [
+            "<?php ?>\nZ\r\n<?php ?>\nZ\r\n",
         ];
 
-        // !T_CONSTANT_ENCAPSED_STRING
-        $cases[] = [
+        yield '!T_CONSTANT_ENCAPSED_STRING' => [
             "<?php \$a=\"a\r\n\";",
         ];
 
-        return $cases;
+        yield [
+            "<?php echo 'foo',\n\n'bar';",
+            "<?php echo 'foo',\r\r\n'bar';",
+        ];
+
+        yield 'T_CLOSE_TAG' => [
+            "<?php\n?>\n<?php\n",
+            "<?php\n?>\r\n<?php\n",
+        ];
+
+        yield 'T_CLOSE_TAG II' => [
+            "<?php\n?>\n<?php\n?>\n<?php\n",
+            "<?php\n?>\r\n<?php\n?>\r\n<?php\n",
+        ];
     }
 
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideMessyWhitespacesCases
+     * @dataProvider provideWithWhitespacesConfigCases
      */
-    public function testMessyWhitespaces($expected, $input = null)
+    #[DataProvider('provideWithWhitespacesConfigCases')]
+    public function testWithWhitespacesConfig(string $expected, ?string $input = null): void
     {
         $this->fixer->setWhitespacesConfig(new WhitespacesFixerConfig("\t", "\r\n"));
 
         $this->doTest($expected, $input);
     }
 
-    public function provideMessyWhitespacesCases()
+    /**
+     * @return iterable<array{string, string}>
+     */
+    public static function provideWithWhitespacesConfigCases(): iterable
     {
-        $cases = array_map(static function (array $case) {
-            return array_reverse($case);
-        }, $this->provideCommonCases());
+        yield from array_map(static fn (array $case): array => array_reverse($case), self::provideCommonCases());
 
-        $cases[] = [
+        yield [
             "<?php \$b = \" \$a \r\n 123\"; \$a = <<<TEST\r\nAAAAA \r\n |\r\nTEST;\r\n",
             "<?php \$b = \" \$a \r\n 123\"; \$a = <<<TEST\nAAAAA \n |\nTEST;\r\n", // both types
         ];
 
-        $cases[] = [
+        yield [
             "<?php \$b = \" \$a \r\n 123\"; \$a = <<<TEST\r\nAAAAA \r\n |\r\nTEST;\r\n",
             "<?php \$b = \" \$a \r\n 123\"; \$a = <<<TEST\nAAAAA \r\n |\nTEST;\n", // both types
         ];
-
-        return $cases;
     }
 
-    private function provideCommonCases()
+    /**
+     * @return array<int|string, array{string, string}>
+     */
+    private static function provideCommonCases(): array
     {
         return [
-            // T_OPEN_TAG
-            [
+            'T_OPEN_TAG' => [
                 "<?php\n \$a = 1;",
                 "<?php\r\n \$a = 1;",
             ],
-            // T_WHITESPACE
-            [
+            'T_WHITESPACE' => [
                 "<?php \n \$a\n= 1;\n",
                 "<?php \r\n \$a\r\n= 1;\r\n",
             ],
-            // T_COMMENT
-            [
+            'T_COMMENT' => [
                 "<?php /*\n*/",
                 "<?php /*\r\n*/",
             ],
-            // T_DOC_COMMENT
-            [
+            'T_DOC_COMMENT' => [
                 "<?php /**\n*/",
                 "<?php /**\r\n*/",
             ],
-            // T_START_HEREDOC
-            [
+            'T_START_HEREDOC' => [
                 "<?php \$a = <<<'TEST'\nAA\nTEST;\n",
                 "<?php \$a = <<<'TEST'\r\nAA\r\nTEST;\r\n",
             ],
@@ -127,8 +143,7 @@ final class LineEndingFixerTest extends AbstractFixerTestCase
                 "<?php \$a = <<<TEST\nAAA\nTEST;\n",
                 "<?php \$a = <<<TEST\r\nAAA\r\nTEST;\r\n",
             ],
-            // T_ENCAPSED_AND_WHITESPACE
-            [
+            'T_ENCAPSED_AND_WHITESPACE' => [
                 "<?php \$a = <<<'TEST'\nAAAA 1\n \$b\nTEST;\n",
                 "<?php \$a = <<<'TEST'\r\nAAAA 1\r\n \$b\r\nTEST;\r\n",
             ],

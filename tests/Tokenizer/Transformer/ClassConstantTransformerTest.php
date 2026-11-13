@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,6 +16,9 @@ namespace PhpCsFixer\Tests\Tokenizer\Transformer;
 
 use PhpCsFixer\Tests\Test\AbstractTransformerTestCase;
 use PhpCsFixer\Tokenizer\CT;
+use PhpCsFixer\Tokenizer\Transformer\ClassConstantTransformer;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
@@ -21,46 +26,56 @@ use PhpCsFixer\Tokenizer\CT;
  * @internal
  *
  * @covers \PhpCsFixer\Tokenizer\Transformer\ClassConstantTransformer
+ *
+ * @phpstan-import-type _TransformerTestExpectedKindsUnderIndex from AbstractTransformerTestCase
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(ClassConstantTransformer::class)]
 final class ClassConstantTransformerTest extends AbstractTransformerTestCase
 {
     /**
-     * @param string $source
+     * @param _TransformerTestExpectedKindsUnderIndex $expectedTokens
      *
      * @dataProvider provideProcessCases
      */
-    public function testProcess($source, array $expectedTokens = [])
+    #[DataProvider('provideProcessCases')]
+    public function testProcess(string $source, array $expectedTokens = []): void
     {
         $this->doTest(
             $source,
             $expectedTokens,
             [
                 CT::T_CLASS_CONSTANT,
-            ]
+            ],
         );
     }
 
-    public function provideProcessCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: _TransformerTestExpectedKindsUnderIndex}>
+     */
+    public static function provideProcessCases(): iterable
     {
-        return [
+        yield [
+            '<?php echo X::class;',
             [
-                '<?php echo X::class;',
-                [
-                    5 => CT::T_CLASS_CONSTANT,
-                ],
+                5 => CT::T_CLASS_CONSTANT,
             ],
+        ];
+
+        yield [
+            '<?php echo X::cLaSS;',
             [
-                '<?php echo X::cLaSS;',
-                [
-                    5 => CT::T_CLASS_CONSTANT,
-                ],
+                5 => CT::T_CLASS_CONSTANT,
             ],
-            [
-                '<?php echo X::bar;',
-            ],
-            [
-                '<?php class X{}',
-            ],
+        ];
+
+        yield [
+            '<?php echo X::bar;',
+        ];
+
+        yield [
+            '<?php class X{}',
         ];
     }
 }

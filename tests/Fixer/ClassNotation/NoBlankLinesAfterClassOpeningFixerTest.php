@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,45 +14,42 @@
 
 namespace PhpCsFixer\Tests\Fixer\ClassNotation;
 
+use PhpCsFixer\Fixer\ClassNotation\NoBlankLinesAfterClassOpeningFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
 use PhpCsFixer\WhitespacesFixerConfig;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
- * @author Ceeram <ceeram@cakephp.org>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\ClassNotation\NoBlankLinesAfterClassOpeningFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\ClassNotation\NoBlankLinesAfterClassOpeningFixer>
+ *
+ * @author Ceeram <ceeram@cakephp.org>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NoBlankLinesAfterClassOpeningFixer::class)]
 final class NoBlankLinesAfterClassOpeningFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideTraitsCases
+     * @return iterable<int, array{0: string, 1?: string}>
      */
-    public function testFixTraits($expected, $input = null)
+    public static function provideFixCases(): iterable
     {
-        $this->doTest($expected, $input);
-    }
-
-    public function provideFixCases()
-    {
-        $cases = [];
-
-        $cases[] = [
+        yield [
             '<?php
 class Good
 {
@@ -69,7 +68,8 @@ class Good
     }
 }',
         ];
-        $cases[] = [
+
+        yield [
             '<?php
 class Good
 {
@@ -95,7 +95,7 @@ class Good
 }',
         ];
 
-        $cases[] = [
+        yield [
             '<?php
 interface Good
 {
@@ -116,7 +116,7 @@ interface Good
         ];
 
         // check if some fancy whitespaces aren't modified
-        $cases[] = [
+        yield [
             '<?php
 class Good
 {public
@@ -130,14 +130,41 @@ class Good
 }',
         ];
 
-        return $cases;
-    }
+        // check if line with spaces is removed when next token is indented
+        yield [
+            '<?php
+class Foo
+{
+    function bar() {}
+}
+',
+            '<?php
+class Foo
+{
+    '.'
+    function bar() {}
+}
+',
+        ];
 
-    public function provideTraitsCases()
-    {
-        $cases = [];
+        // check if line with spaces is removed when next token is not indented
+        yield [
+            '<?php
+class Foo
+{
+function bar() {}
+}
+',
+            '<?php
+class Foo
+{
+    '.'
+function bar() {}
+}
+',
+        ];
 
-        $cases[] = [
+        yield [
             '<?php
 trait Good
 {
@@ -156,34 +183,66 @@ trait Good
     public function firstMethod() {}
 }',
         ];
-
-        return $cases;
     }
 
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideMessyWhitespacesCases
+     * @dataProvider provideWithWhitespacesConfigCases
      */
-    public function testMessyWhitespaces($expected, $input = null)
+    #[DataProvider('provideWithWhitespacesConfigCases')]
+    public function testWithWhitespacesConfig(string $expected, ?string $input = null): void
     {
         $this->fixer->setWhitespacesConfig(new WhitespacesFixerConfig("\t", "\r\n"));
 
         $this->doTest($expected, $input);
     }
 
-    public function provideMessyWhitespacesCases()
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideWithWhitespacesConfigCases(): iterable
     {
-        return [
-            [
-                "<?php\nclass Foo\n{\r\n    public function bar() {}\n}",
-                "<?php\nclass Foo\n{\n\n    public function bar() {}\n}",
-            ],
-            [
-                "<?php\nclass Foo\n{\r\n    public function bar() {}\n}",
-                "<?php\nclass Foo\n{\r\n\r\n    public function bar() {}\n}",
-            ],
+        yield [
+            "<?php\nclass Foo\n{\r\n    public function bar() {}\n}",
+            "<?php\nclass Foo\n{\n\n    public function bar() {}\n}",
+        ];
+
+        yield [
+            "<?php\nclass Foo\n{\r\n    public function bar() {}\n}",
+            "<?php\nclass Foo\n{\r\n\r\n    public function bar() {}\n}",
+        ];
+    }
+
+    /**
+     * @dataProvider provideFix81Cases
+     *
+     * @requires PHP >= 8.1.0
+     */
+    #[DataProvider('provideFix81Cases')]
+    #[RequiresPhp('>= 8.1.0')]
+    public function testFix81(string $expected, string $input): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideFix81Cases(): iterable
+    {
+        yield [
+            '<?php
+enum Good
+{
+    public function firstMethod()
+    {}
+}',
+            '<?php
+enum Good
+{
+
+    public function firstMethod()
+    {}
+}',
         ];
     }
 }

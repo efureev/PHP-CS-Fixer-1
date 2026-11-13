@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,33 +14,39 @@
 
 namespace PhpCsFixer\Tests\Fixer\Phpdoc;
 
+use PhpCsFixer\Fixer\Phpdoc\PhpdocSingleLineVarSpacingFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Phpdoc\PhpdocSingleLineVarSpacingFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Phpdoc\PhpdocSingleLineVarSpacingFixer>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(PhpdocSingleLineVarSpacingFixer::class)]
 final class PhpdocSingleLineVarSpacingFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
                     class A {
                         /** @var MyCass6 $a */
                         public $test6 = 6;
@@ -47,7 +55,7 @@ final class PhpdocSingleLineVarSpacingFixerTest extends AbstractFixerTestCase
                         public $testB = 7;
                     }
                 ',
-                '<?php
+            '<?php
                     class A {
                         /**@var MyCass6 $a */
                         public $test6 = 6;
@@ -56,9 +64,10 @@ final class PhpdocSingleLineVarSpacingFixerTest extends AbstractFixerTestCase
                         public $testB = 7;
                     }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     /** @var MyCass1 $test1 description   and more. */
                     $test0 = 1;
 
@@ -79,7 +88,7 @@ final class PhpdocSingleLineVarSpacingFixerTest extends AbstractFixerTestCase
                         public $test6 = 6;
                     }
                 ',
-                '<?php
+            '<?php
                     /**    @var   MyCass1 $test1      description   and more.*/
                     $test0 = 1;
 
@@ -100,9 +109,10 @@ final class PhpdocSingleLineVarSpacingFixerTest extends AbstractFixerTestCase
                         public $test6 = 6;
                     }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 class A
 {
     /**
@@ -129,7 +139,6 @@ class A
     */
     private $test0 = 0;
 }',
-            ],
         ];
     }
 }

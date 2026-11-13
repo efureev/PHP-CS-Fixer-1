@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,134 +14,179 @@
 
 namespace PhpCsFixer\Tests\Fixer\FunctionNotation;
 
+use PhpCsFixer\AbstractFopenFlagFixer;
+use PhpCsFixer\Fixer\FunctionNotation\FopenFlagOrderFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
- * @covers \PhpCsFixer\Fixer\FunctionNotation\FOpenFlagOrderFixer
+ * @covers \PhpCsFixer\AbstractFopenFlagFixer
+ * @covers \PhpCsFixer\Fixer\FunctionNotation\FopenFlagOrderFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\FunctionNotation\FopenFlagOrderFixer>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(AbstractFopenFlagFixer::class)]
+#[CoversClass(FopenFlagOrderFixer::class)]
 final class FopenFlagOrderFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield 'most simple fix case' => [
+            '<?php
                     $a = fopen($foo, \'rw+b\');
                 ',
-                '<?php
+            '<?php
                     $a = fopen($foo, \'brw+\');
                 ',
-            ],
-            [
-                '<?php
-                    $a = \FOPEN($foo, "cr+w+b");
+        ];
+
+        yield '"fopen" casing insensitive' => [
+            '<?php
+                    $a = \FOPen($foo, "cr+w+b");
                     $a = \FOPEN($foo, "crw+b");
                 ',
-                '<?php
-                    $a = \FOPEN($foo, "bw+r+c");
+            '<?php
+                    $a = \FOPen($foo, "bw+r+c");
                     $a = \FOPEN($foo, "bw+rc");
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield 'comments around flags' => [
+            '<?php
                     $a = fopen($foo,/*0*/\'rb\'/*1*/);
                 ',
-                '<?php
+            '<?php
                     $a = fopen($foo,/*0*/\'br\'/*1*/);
                 ',
-            ],
-            'binary string' => [
-                '<?php
+        ];
+
+        yield 'binary string' => [
+            '<?php
                     $a = \fopen($foo, b"cr+w+b");
                     $b = \fopen($foo, B"crw+b");
                     $c = \fopen($foo, b\'cr+w+b\');
                     $d = \fopen($foo, B\'crw+b\');
                 ',
-                '<?php
+            '<?php
                     $a = \fopen($foo, b"bw+r+c");
                     $b = \fopen($foo, B"bw+rc");
                     $c = \fopen($foo, b\'bw+r+c\');
                     $d = \fopen($foo, B\'bw+rc\');
                 ',
-            ],
-            'common typos' => [
-                '<?php
+        ];
+
+        yield 'common typos' => [
+            '<?php
                      $a = fopen($a, "b+r");
-                     $b = fopen($b, "b+w");
+                     $b = fopen($b, \'b+w\');
                 ',
-            ],
-            // `t` cases
-            [
-                '<?php
+        ];
+
+        // `t` cases
+        yield [
+            '<?php
                     $a = fopen($foo, \'rw+t\');
                 ',
-                '<?php
+            '<?php
                     $a = fopen($foo, \'trw+\');
                 ',
-            ],
-            [
-                '<?php
-                    $a = fopen($foo, \'rw+tb\');
+        ];
+
+        yield [
+            '<?php
+                    $a = \fopen($foo, \'rw+tb\');
                 ',
-                '<?php
-                    $a = fopen($foo, \'btrw+\');
+            '<?php
+                    $a = \fopen($foo, \'btrw+\');
                 ',
-            ],
-            // don't fix cases
-            'single flag' => [
-                '<?php
+        ];
+
+        // don't fix cases
+        yield 'single flag' => [
+            '<?php
                     $a = fopen($foo, "r");
                     $a = fopen($foo, "r+");
                 ',
-            ],
-            'not simple flags' => [
-                '<?php
+        ];
+
+        yield 'not simple flags' => [
+            '<?php
                     $a = fopen($foo, "br+".$a);
                 ',
-            ],
-            'wrong # of arguments' => [
-                '<?php
-                    $b = fopen("br+");
+        ];
+
+        yield 'wrong # of arguments' => [
+            '<?php
+                    $b = \fopen("br+");
                     $c = fopen($foo, "bw+", 1, 2 , 3);
                 ',
-            ],
-            '"flags" is too long (must be overridden)' => [
-                '<?php
+        ];
+
+        yield '"flags" is too long (must be overridden)' => [
+            '<?php
                     $d = fopen($foo, "r+w+a+x+c+etbX");
                 ',
-            ],
-            'static method call' => [
-                '<?php
+        ];
+
+        yield 'static method call' => [
+            '<?php
                     $e = A::fopen($foo, "bw+");
                 ',
-            ],
-            'method call' => [
-                '<?php
+        ];
+
+        yield 'method call' => [
+            '<?php
                     $f = $b->fopen($foo, "br+");
                 ',
-            ],
-            'comments, PHPDoc and literal' => [
-                '<?php
+        ];
+
+        yield 'comments, PHPDoc and literal' => [
+            '<?php
                     // fopen($foo, "brw");
                     /* fopen($foo, "brw"); */
                     echo("fopen($foo, \"brw\")");
                 ',
-            ],
+        ];
+
+        yield 'invalid flag values' => [
+            '<?php
+                    $a = fopen($foo, \'\');
+                    $a = fopen($foo, \'x\'); // ok but should not mark collection as changed
+                    $a = fopen($foo, \'k\');
+                    $a = fopen($foo, \'kz\');
+                    $a = fopen($foo, \'k+\');
+                    $a = fopen($foo, \'+k\');
+                    $a = fopen($foo, \'xc++\');
+                    $a = fopen($foo, \'w+r+r+\');
+                    $a = fopen($foo, \'+brw+\');
+                    $a = fopen($foo, \'b+rw\');
+                    $a = fopen($foo, \'bbrw+\');
+                    $a = fopen($foo, \'brw++\');
+                    $a = fopen($foo, \'++brw\');
+                    $a = fopen($foo, \'ybrw+\');
+                    $a = fopen($foo, \'rr\');
+                    $a = fopen($foo, \'ロ\');
+                    $a = fopen($foo, \'ロ+\');
+                    $a = \fopen($foo, \'rロ\');
+                    $a = \fopen($foo, \'w+ロ\');
+                ',
         ];
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,9 +14,14 @@
 
 namespace PhpCsFixer\Tests\Linter;
 
-use org\bovigo\vfs\vfsStream;
 use PhpCsFixer\Linter\CachingLinter;
+use PhpCsFixer\Linter\LinterInterface;
+use PhpCsFixer\Linter\LintingResultInterface;
+use PhpCsFixer\Tests\Test\TestCaseUtils;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Symfony\Component\Filesystem\Filesystem;
 
 /**
  * @author ntzm
@@ -22,69 +29,152 @@ use PhpCsFixer\Tests\TestCase;
  * @internal
  *
  * @covers \PhpCsFixer\Linter\CachingLinter
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(CachingLinter::class)]
 final class CachingLinterTest extends TestCase
 {
     /**
-     * @param bool $isAsync
-     *
      * @dataProvider provideIsAsyncCases
      */
-    public function testIsAsync($isAsync)
+    #[DataProvider('provideIsAsyncCases')]
+    public function testIsAsync(bool $isAsync): void
     {
-        $sublinter = $this->prophesize(\PhpCsFixer\Linter\LinterInterface::class);
-        $sublinter->isAsync()->willReturn($isAsync);
+        $sublinter = $this->createLinterDouble($isAsync, [], []);
 
-        $linter = new CachingLinter($sublinter->reveal());
+        $linter = new CachingLinter($sublinter);
 
-        $this->assertSame($isAsync, $linter->isAsync());
+        self::assertSame($isAsync, $linter->isAsync());
     }
 
-    public function provideIsAsyncCases()
+    /**
+     * @return iterable<int, array{bool}>
+     */
+    public static function provideIsAsyncCases(): iterable
     {
-        return [
-            [true],
-            [false],
-        ];
+        yield [true];
+
+        yield [false];
     }
 
-    public function testLintFileIsCalledOnceOnSameContent()
+    public function testLintFileIsCalledOnceOnSameContent(): void
     {
-        $fs = vfsStream::setup('root', null, [
-            'foo.php' => '<?php echo "baz";',
-            'bar.php' => '<?php echo "baz";',
-            'baz.php' => '<?php echo "foobarbaz";',
-        ]);
+        $directory = TestCaseUtils::createTemporaryDirectory();
 
-        $result1 = $this->prophesize(\PhpCsFixer\Linter\LintingResultInterface::class);
-        $result2 = $this->prophesize(\PhpCsFixer\Linter\LintingResultInterface::class);
+        try {
+            file_put_contents($directory.'/foo.php', '<?php echo "baz";');
+            file_put_contents($directory.'/bar.php', '<?php echo "baz";');
+            file_put_contents($directory.'/baz.php', '<?php echo "foobarbaz";');
 
-        $sublinter = $this->prophesize(\PhpCsFixer\Linter\LinterInterface::class);
-        $sublinter->lintFile($fs->url().'/foo.php')->shouldBeCalledTimes(1)->willReturn($result1->reveal());
-        $sublinter->lintFile($fs->url().'/bar.php')->shouldNotBeCalled();
-        $sublinter->lintFile($fs->url().'/baz.php')->shouldBeCalledTimes(1)->willReturn($result2->reveal());
+            $result1 = $this->createLintingResultDouble();
+            $result2 = $this->createLintingResultDouble();
 
-        $linter = new CachingLinter($sublinter->reveal());
+            $sublinter = $this->createLinterDouble(
+                null,
+                [
+                    $directory.'/foo.php' => $result1,
+                    $directory.'/baz.php' => $result2,
+                ],
+                [],
+            );
 
-        $this->assertSame($result1->reveal(), $linter->lintFile($fs->url().'/foo.php'));
-        $this->assertSame($result1->reveal(), $linter->lintFile($fs->url().'/foo.php'));
-        $this->assertSame($result1->reveal(), $linter->lintFile($fs->url().'/bar.php'));
-        $this->assertSame($result2->reveal(), $linter->lintFile($fs->url().'/baz.php'));
+            $linter = new CachingLinter($sublinter);
+
+            self::assertSame($result1, $linter->lintFile($directory.'/foo.php'));
+            self::assertSame($result1, $linter->lintFile($directory.'/foo.php'));
+            self::assertSame($result1, $linter->lintFile($directory.'/bar.php'));
+            self::assertSame($result2, $linter->lintFile($directory.'/baz.php'));
+        } finally {
+            (new Filesystem())->remove($directory);
+        }
     }
 
-    public function testLintSourceIsCalledOnceOnSameContent()
+    public function testLintSourceIsCalledOnceOnSameContent(): void
     {
-        $result1 = $this->prophesize(\PhpCsFixer\Linter\LintingResultInterface::class);
-        $result2 = $this->prophesize(\PhpCsFixer\Linter\LintingResultInterface::class);
+        $result1 = $this->createLintingResultDouble();
+        $result2 = $this->createLintingResultDouble();
 
-        $sublinter = $this->prophesize(\PhpCsFixer\Linter\LinterInterface::class);
-        $sublinter->lintSource('<?php echo "baz";')->shouldBeCalledTimes(1)->willReturn($result1->reveal());
-        $sublinter->lintSource('<?php echo "foobarbaz";')->shouldBeCalledTimes(1)->willReturn($result2->reveal());
+        $sublinter = $this->createLinterDouble(
+            null,
+            [],
+            [
+                '<?php echo "baz";' => $result1,
+                '<?php echo "foobarbaz";' => $result2,
+            ],
+        );
 
-        $linter = new CachingLinter($sublinter->reveal());
+        $linter = new CachingLinter($sublinter);
 
-        $this->assertSame($result1->reveal(), $linter->lintSource('<?php echo "baz";'));
-        $this->assertSame($result1->reveal(), $linter->lintSource('<?php echo "baz";'));
-        $this->assertSame($result2->reveal(), $linter->lintSource('<?php echo "foobarbaz";'));
+        self::assertSame($result1, $linter->lintSource('<?php echo "baz";'));
+        self::assertSame($result1, $linter->lintSource('<?php echo "baz";'));
+        self::assertSame($result2, $linter->lintSource('<?php echo "foobarbaz";'));
+    }
+
+    /**
+     * @param array<string, LintingResultInterface> $allowedLintFileCalls
+     * @param array<string, LintingResultInterface> $allowedLintSourceCalls
+     */
+    private function createLinterDouble(?bool $isAsync, array $allowedLintFileCalls, array $allowedLintSourceCalls): LinterInterface
+    {
+        return new class($isAsync, $allowedLintFileCalls, $allowedLintSourceCalls) implements LinterInterface {
+            private ?bool $isAsync;
+
+            /** @var array<string, LintingResultInterface> */
+            private array $allowedLintFileCalls;
+
+            /** @var array<string, LintingResultInterface> */
+            private array $allowedLintSourceCalls;
+
+            /**
+             * @param array<string, LintingResultInterface> $allowedLintFileCalls
+             * @param array<string, LintingResultInterface> $allowedLintSourceCalls
+             */
+            public function __construct(?bool $isAsync, array $allowedLintFileCalls, array $allowedLintSourceCalls)
+            {
+                $this->isAsync = $isAsync;
+                $this->allowedLintFileCalls = $allowedLintFileCalls;
+                $this->allowedLintSourceCalls = $allowedLintSourceCalls;
+            }
+
+            public function isAsync(): bool
+            {
+                return $this->isAsync;
+            }
+
+            public function lintFile(string $path): LintingResultInterface
+            {
+                if (!isset($this->allowedLintFileCalls[$path])) {
+                    throw new \LogicException(\sprintf('File "%s" should not be linted.', $path));
+                }
+
+                $result = $this->allowedLintFileCalls[$path];
+                unset($this->allowedLintFileCalls[$path]);
+
+                return $result;
+            }
+
+            public function lintSource(string $source): LintingResultInterface
+            {
+                if (!isset($this->allowedLintSourceCalls[$source])) {
+                    throw new \LogicException(\sprintf('File "%s" should not be linted.', $source));
+                }
+
+                $result = $this->allowedLintSourceCalls[$source];
+                unset($this->allowedLintSourceCalls[$source]);
+
+                return $result;
+            }
+        };
+    }
+
+    private function createLintingResultDouble(): LintingResultInterface
+    {
+        return new class implements LintingResultInterface {
+            public function check(): void
+            {
+                throw new \LogicException('Not implemented.');
+            }
+        };
     }
 }

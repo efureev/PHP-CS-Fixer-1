@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -23,39 +25,38 @@ use PhpCsFixer\Tokenizer\Tokens;
  * @author Gregor Harlan <gharlan@web.de>
  *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class NamespaceOperatorTransformer extends AbstractTransformer
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function getCustomTokens()
+    public function getRequiredPhpVersionId(): int
+    {
+        return 5_03_00;
+    }
+
+    public function isCandidate(Tokens $tokens): bool
+    {
+        return $tokens->isTokenKindFound(\T_NAMESPACE);
+    }
+
+    public function process(Tokens $tokens): void
+    {
+        foreach ($tokens as $index => $token) {
+            if (!$token->isGivenKind(\T_NAMESPACE)) {
+                continue;
+            }
+
+            $nextIndex = $tokens->getNextMeaningfulToken($index);
+
+            if ($tokens[$nextIndex]->isGivenKind(\T_NS_SEPARATOR)) {
+                $tokens[$index] = new Token([CT::T_NAMESPACE_OPERATOR, $token->getContent()]);
+            }
+        }
+    }
+
+    public function getCustomTokens(): array
     {
         return [CT::T_NAMESPACE_OPERATOR];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getRequiredPhpVersionId()
-    {
-        return 50300;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function process(Tokens $tokens, Token $token, $index)
-    {
-        if (!$token->isGivenKind(T_NAMESPACE)) {
-            return;
-        }
-
-        $nextIndex = $tokens->getNextMeaningfulToken($index);
-        $nextToken = $tokens[$nextIndex];
-
-        if ($nextToken->isGivenKind(T_NS_SEPARATOR)) {
-            $tokens[$index] = new Token([CT::T_NAMESPACE_OPERATOR, $token->getContent()]);
-        }
     }
 }

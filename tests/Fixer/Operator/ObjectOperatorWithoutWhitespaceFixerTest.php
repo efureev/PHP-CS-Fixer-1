@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,70 +14,114 @@
 
 namespace PhpCsFixer\Tests\Fixer\Operator;
 
+use PhpCsFixer\Fixer\Operator\ObjectOperatorWithoutWhitespaceFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
- * @author Farhad Safarov <farhad.safarov@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Operator\ObjectOperatorWithoutWhitespaceFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Operator\ObjectOperatorWithoutWhitespaceFixer>
+ *
+ * @author Farhad Safarov <farhad.safarov@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(ObjectOperatorWithoutWhitespaceFixer::class)]
 final class ObjectOperatorWithoutWhitespaceFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php $object->method();',
-                '<?php $object   ->method();',
-            ],
-            [
-                '<?php $object->method();',
-                '<?php $object   ->   method();',
-            ],
-            [
-                '<?php $object->method();',
-                '<?php $object->   method();',
-            ],
-            [
-                '<?php $object->method();',
-                '<?php $object	->method();',
-            ],
-            [
-                '<?php $object->method();',
-                '<?php $object->	method();',
-            ],
-            [
-                '<?php $object->method();',
-                '<?php $object	->	method();',
-            ],
-            [
-                '<?php echo "use it as -> you want";',
-            ],
-            // Ensure that doesn't break chained multi-line statements
-            [
-                '<?php $object->method()
+        yield [
+            '<?php $object->method();',
+            '<?php $object   ->method();',
+        ];
+
+        yield [
+            '<?php $object->method();',
+            '<?php $object   ->   method();',
+        ];
+
+        yield [
+            '<?php $object->method();',
+            '<?php $object->   method();',
+        ];
+
+        yield [
+            '<?php $object->method();',
+            '<?php $object	->method();',
+        ];
+
+        yield [
+            '<?php $object->method();',
+            '<?php $object->	method();',
+        ];
+
+        yield [
+            '<?php $object->method();',
+            '<?php $object	->	method();',
+        ];
+
+        yield [
+            '<?php echo "use it as -> you want";',
+        ];
+
+        // Ensure that doesn't break chained multi-line statements
+        yield [
+            '<?php $object->method()
                         ->method2()
                         ->method3();',
-            ],
-            [
-                '<?php $this
+        ];
+
+        yield [
+            '<?php $this
              ->add()
              // Some comment
              ->delete();',
-            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideFix80Cases
+     *
+     * @requires PHP >= 8.0.0
+     */
+    #[DataProvider('provideFix80Cases')]
+    #[RequiresPhp('>= 8.0.0')]
+    public function testFix80(string $expected, string $input): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideFix80Cases(): iterable
+    {
+        yield [
+            '<?php $object?->method();',
+            '<?php $object?->   method();',
+        ];
+
+        yield [
+            '<?php $object?->method();',
+            '<?php $object   ?->   method();',
         ];
     }
 }

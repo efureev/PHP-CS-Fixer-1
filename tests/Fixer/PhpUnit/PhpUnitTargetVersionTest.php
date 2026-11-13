@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,6 +16,8 @@ namespace PhpCsFixer\Tests\Fixer\PhpUnit;
 
 use PhpCsFixer\Fixer\PhpUnit\PhpUnitTargetVersion;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
@@ -21,40 +25,47 @@ use PhpCsFixer\Tests\TestCase;
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\PhpUnit\PhpUnitTargetVersion
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(PhpUnitTargetVersion::class)]
 final class PhpUnitTargetVersionTest extends TestCase
 {
     /**
-     * @param bool        $expected
-     * @param string      $candidate
-     * @param string      $target
-     * @param null|string $exception
+     * @dataProvider provideFulfillsCases
      *
-     * @dataProvider provideTestFulfillsCases
+     * @param null|class-string<\Throwable> $exception
      */
-    public function testFulfills($expected, $candidate, $target, $exception = null)
+    #[DataProvider('provideFulfillsCases')]
+    public function testFulfills(bool $expected, string $candidate, string $target, ?string $exception = null): void
     {
         if (null !== $exception) {
             $this->expectException($exception);
         }
 
-        $this->assertSame(
+        self::assertSame(
             $expected,
-            PhpUnitTargetVersion::fulfills($candidate, $target)
+            PhpUnitTargetVersion::fulfills($candidate, $target),
         );
     }
 
-    public function provideTestFulfillsCases()
+    /**
+     * @return iterable<int, array{0: bool, 1: string, 2: string, 3?: string}>
+     */
+    public static function provideFulfillsCases(): iterable
     {
-        return [
-            [true, PhpUnitTargetVersion::VERSION_NEWEST, PhpUnitTargetVersion::VERSION_5_6],
-            [true, PhpUnitTargetVersion::VERSION_NEWEST, PhpUnitTargetVersion::VERSION_5_2],
-            [true, PhpUnitTargetVersion::VERSION_5_6, PhpUnitTargetVersion::VERSION_5_6],
-            [true, PhpUnitTargetVersion::VERSION_5_6, PhpUnitTargetVersion::VERSION_5_2],
-            [true, PhpUnitTargetVersion::VERSION_5_2, PhpUnitTargetVersion::VERSION_5_2],
-            [false, PhpUnitTargetVersion::VERSION_5_2, PhpUnitTargetVersion::VERSION_5_6],
-            [false, PhpUnitTargetVersion::VERSION_5_2, PhpUnitTargetVersion::VERSION_5_6],
-            [false, PhpUnitTargetVersion::VERSION_5_2, PhpUnitTargetVersion::VERSION_NEWEST, \LogicException::class],
-        ];
+        yield [true, PhpUnitTargetVersion::VERSION_NEWEST, PhpUnitTargetVersion::VERSION_5_6];
+
+        yield [true, PhpUnitTargetVersion::VERSION_NEWEST, PhpUnitTargetVersion::VERSION_5_2];
+
+        yield [true, PhpUnitTargetVersion::VERSION_5_6, PhpUnitTargetVersion::VERSION_5_6];
+
+        yield [true, PhpUnitTargetVersion::VERSION_5_6, PhpUnitTargetVersion::VERSION_5_2];
+
+        yield [true, PhpUnitTargetVersion::VERSION_5_2, PhpUnitTargetVersion::VERSION_5_2];
+
+        yield [false, PhpUnitTargetVersion::VERSION_5_2, PhpUnitTargetVersion::VERSION_5_6];
+
+        yield [false, PhpUnitTargetVersion::VERSION_5_2, PhpUnitTargetVersion::VERSION_NEWEST, \LogicException::class];
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -27,41 +29,53 @@ use PhpCsFixer\Tokenizer\Tokens;
  * @author Gregor Harlan <gharlan@web.de>
  *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class ImportTransformer extends AbstractTransformer
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function getCustomTokens()
+    public function getPriority(): int
     {
-        return [CT::T_CONST_IMPORT, CT::T_FUNCTION_IMPORT];
+        // Should run after CurlyBraceTransformer and ReturnRefTransformer
+        return -1;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function getRequiredPhpVersionId()
+    public function getRequiredPhpVersionId(): int
     {
-        return 50600;
+        return 5_06_00;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function process(Tokens $tokens, Token $token, $index)
+    public function isCandidate(Tokens $tokens): bool
     {
-        if (!$token->isGivenKind([T_CONST, T_FUNCTION])) {
-            return;
-        }
+        return $tokens->isAnyTokenKindsFound([\T_CONST, \T_FUNCTION]);
+    }
 
-        $prevToken = $tokens[$tokens->getPrevMeaningfulToken($index)];
+    public function process(Tokens $tokens): void
+    {
+        foreach ($tokens as $index => $token) {
+            if (!$token->isGivenKind([\T_CONST, \T_FUNCTION])) {
+                continue;
+            }
 
-        if ($prevToken->isGivenKind(T_USE)) {
+            $prevToken = $tokens[$tokens->getPrevMeaningfulToken($index)];
+
+            if (!$prevToken->isGivenKind(\T_USE)) {
+                $nextToken = $tokens[$tokens->getNextTokenOfKind($index, ['=', '(', [CT::T_RETURN_REF], [CT::T_GROUP_IMPORT_BRACE_CLOSE]])];
+
+                if (!$nextToken->isGivenKind(CT::T_GROUP_IMPORT_BRACE_CLOSE)) {
+                    continue;
+                }
+            }
+
             $tokens[$index] = new Token([
-                $token->isGivenKind(T_FUNCTION) ? CT::T_FUNCTION_IMPORT : CT::T_CONST_IMPORT,
+                $token->isGivenKind(\T_FUNCTION) ? CT::T_FUNCTION_IMPORT : CT::T_CONST_IMPORT,
                 $token->getContent(),
             ]);
         }
+    }
+
+    public function getCustomTokens(): array
+    {
+        return [CT::T_CONST_IMPORT, CT::T_FUNCTION_IMPORT];
     }
 }

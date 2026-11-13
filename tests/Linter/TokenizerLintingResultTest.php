@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,42 +14,67 @@
 
 namespace PhpCsFixer\Tests\Linter;
 
+use PhpCsFixer\Linter\LintingException;
 use PhpCsFixer\Linter\TokenizerLintingResult;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DoesNotPerformAssertions;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
  * @covers \PhpCsFixer\Linter\TokenizerLintingResult
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(TokenizerLintingResult::class)]
 final class TokenizerLintingResultTest extends TestCase
 {
     /**
      * @doesNotPerformAssertions
      */
-    public function testTokenizerLintingResultOK()
+    #[DoesNotPerformAssertions]
+    public function testTokenizerLintingResultOK(): void
     {
         $result = new TokenizerLintingResult();
         $result->check();
     }
 
-    public function testTokenizerLintingResultFail()
+    public function testTokenizerLintingResultFailParseError(): void
     {
-        $error = new \ParseError('PHPUnit', 567);
+        $error = new \ParseError('syntax error, unexpected end of file, expecting \'{\'', 567);
         $line = __LINE__ - 1;
 
         $result = new TokenizerLintingResult($error);
 
         $this->expectException(
-            \PhpCsFixer\Linter\LintingException::class
+            LintingException::class,
         );
-        $this->expectExceptionMessageRegExp(
-            sprintf('#^PHP Parse error: PHPUnit on line %d.#', $line)
+
+        $this->expectExceptionMessage(
+            \sprintf('Parse error: syntax error, unexpected end of file, expecting \'{\' on line %d.', $line),
         );
+
         $this->expectExceptionCode(
-            567
+            567,
+        );
+
+        $result->check();
+    }
+
+    public function testTokenizerLintingResultFailCompileError(): void
+    {
+        $error = new \CompileError('Multiple access type modifiers are not allowed');
+        $line = __LINE__ - 1;
+
+        $result = new TokenizerLintingResult($error);
+
+        $this->expectException(
+            LintingException::class,
+        );
+
+        $this->expectExceptionMessage(
+            \sprintf('Fatal error: Multiple access type modifiers are not allowed on line %d.', $line),
         );
 
         $result->check();

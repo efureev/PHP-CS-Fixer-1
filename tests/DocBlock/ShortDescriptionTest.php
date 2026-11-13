@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -15,33 +17,37 @@ namespace PhpCsFixer\Tests\DocBlock;
 use PhpCsFixer\DocBlock\DocBlock;
 use PhpCsFixer\DocBlock\ShortDescription;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @internal
  *
  * @covers \PhpCsFixer\DocBlock\ShortDescription
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(ShortDescription::class)]
 final class ShortDescriptionTest extends TestCase
 {
     /**
-     * @param mixed      $expected
-     * @param null|mixed $input
-     *
      * @dataProvider provideGetEndCases
      */
-    public function testGetEnd($expected, $input = null)
+    #[DataProvider('provideGetEndCases')]
+    public function testGetEnd(?int $expected, string $input): void
     {
         $doc = new DocBlock($input);
         $shortDescription = new ShortDescription($doc);
 
-        $this->assertSame($expected, $shortDescription->getEnd());
+        self::assertSame($expected, $shortDescription->getEnd());
     }
 
-    public function provideGetEndCases()
+    /**
+     * @return iterable<int, array{null|int, string}>
+     */
+    public static function provideGetEndCases(): iterable
     {
-        return [
-            [null, '/** */'],
-            [1, '/**
+        yield [1, '/**
      * Test docblock.
      *
      * @param string $hello
@@ -55,19 +61,24 @@ final class ShortDescriptionTest extends TestCase
      * kasdkasdkbasdasdasdjhbasdhbasjdbjasbdjhb
      *
      * @return void
-     */'],
-            [2, '/**
+     */'];
+
+        yield [2, '/**
                   * This is a multi-line
                   * short description.
-                  */'],
-            [3, '/**
+                  */'];
+
+        yield [3, '/**
                   *
                   *
                   * There might be extra blank lines.
                   *
                   *
                   * And here is description...
-                  */'],
-        ];
+                  */'];
+
+        yield [null, '/** */'];
+
+        yield [null, "/**\n * @test\n*/"];
     }
 }

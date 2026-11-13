@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -18,13 +20,10 @@ use Symfony\Component\Finder\SplFileInfo;
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
  *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 interface IntegrationCaseFactoryInterface
 {
-    /**
-     * @param SplFileInfo $file
-     *
-     * @return IntegrationCase
-     */
-    public function create(SplFileInfo $file);
+    public function create(SplFileInfo $file): IntegrationCase;
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,383 +14,347 @@
 
 namespace PhpCsFixer\Tests\Fixer\Phpdoc;
 
+use PhpCsFixer\Fixer\Phpdoc\PhpdocSummaryFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
 use PhpCsFixer\WhitespacesFixerConfig;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Graham Campbell <graham@alt-three.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Phpdoc\PhpdocSummaryFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Phpdoc\PhpdocSummaryFixer>
+ *
+ * @author Graham Campbell <hello@gjcampbell.co.uk>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(PhpdocSummaryFixer::class)]
 final class PhpdocSummaryFixerTest extends AbstractFixerTestCase
 {
-    public function testFix()
+    /**
+     * @dataProvider provideFixCases
+     */
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null, ?WhitespacesFixerConfig $whitespacesConfig = null): void
     {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * Hello there.
-     */
-
-EOF;
-
-        $input = <<<'EOF'
-<?php
-    /**
-     * Hello there
-     */
-
-EOF;
-
+        $this->fixer->setWhitespacesConfig($whitespacesConfig ?? new WhitespacesFixerConfig());
         $this->doTest($expected, $input);
     }
 
-    public function testWithPeriod()
+    /**
+     * @return iterable<string, array{0: string, 1?: string, 2?: WhitespacesFixerConfig}>
+     */
+    public static function provideFixCases(): iterable
     {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * Hello.
-     */
+        yield 'with trailing space' => [
+            '<?php
+/**
+ * Test.
+ */',
+            '<?php
+/**
+ * Test         '.'
+ */',
+        ];
 
-EOF;
-        $this->doTest($expected);
-    }
+        yield 'with period' => [
+            <<<'EOF'
+                <?php
+                    /**
+                     * Hello there.
+                     */
 
-    public function testWithQuestionMark()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * Hello?
-     */
+                EOF,
+            <<<'EOF'
+                <?php
+                    /**
+                     * Hello there
+                     */
 
-EOF;
-        $this->doTest($expected);
-    }
+                EOF,
+        ];
 
-    public function testWithExclamationMark()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * Hello!
-     */
+        yield 'with question mark' => [<<<'EOF'
+            <?php
+                /**
+                 * Hello?
+                 */
 
-EOF;
-        $this->doTest($expected);
-    }
+            EOF];
 
-    public function testWithInvertedQuestionMark()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * Hello¿
-     */
+        yield 'with exclamation mark' => [<<<'EOF'
+            <?php
+                /**
+                 * Hello!
+                 */
 
-EOF;
-        $this->doTest($expected);
-    }
+            EOF];
 
-    public function testWithInvertedExclamationMark()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * Hello¡
-     */
+        yield 'with inverted question mark' => [<<<'EOF'
+            <?php
+                /**
+                 * Hello¿
+                 */
 
-EOF;
-        $this->doTest($expected);
-    }
+            EOF];
 
-    public function testWithUnicodeQuestionMark()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * ハロー？
-     */
+        yield 'with inverted exclamation mark' => [<<<'EOF'
+            <?php
+                /**
+                 * Hello¡
+                 */
 
-EOF;
-        $this->doTest($expected);
-    }
+            EOF];
 
-    public function testWithUnicodeExclamationMark()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * ハロー！
-     */
+        yield 'with unicode question mark' => [<<<'EOF'
+            <?php
+                /**
+                 * ハロー？
+                 */
 
-EOF;
-        $this->doTest($expected);
-    }
+            EOF];
 
-    public function testWithJapanesePeriod()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * ハロー。
-     */
+        yield 'with unicode exclamation mark' => [<<<'EOF'
+            <?php
+                /**
+                 * ハロー！
+                 */
 
-EOF;
-        $this->doTest($expected);
-    }
+            EOF];
 
-    public function testFixIncBlank()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * Hi.
-     *
-     */
+        yield 'with Japanese period' => [<<<'EOF'
+            <?php
+                /**
+                 * ハロー。
+                 */
 
-EOF;
+            EOF];
 
-        $input = <<<'EOF'
-<?php
-    /**
-     * Hi
-     *
-     */
+        yield 'with inc blank' => [
+            <<<'EOF'
+                <?php
+                    /**
+                     * Hi.
+                     *
+                     */
 
-EOF;
+                EOF,
+            <<<'EOF'
+                <?php
+                    /**
+                     * Hi
+                     *
+                     */
 
-        $this->doTest($expected, $input);
-    }
+                EOF,
+        ];
 
-    public function testFixMultiline()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * Hello
-     * there.
-     */
+        yield 'multiline' => [<<<'EOF'
+            <?php
+                /**
+                 * Hello
+                 * there.
+                 */
 
-EOF;
+            EOF,
+            <<<'EOF'
+                <?php
+                    /**
+                     * Hello
+                     * there
+                     */
 
-        $input = <<<'EOF'
-<?php
-    /**
-     * Hello
-     * there
-     */
+                EOF,
+        ];
 
-EOF;
+        yield 'with list' => [<<<'EOF'
+            <?php
+                /**
+                 * Options:
+                 *  * a: aaa
+                 *  * b: bbb
+                 *  * c: ccc
+                 */
 
-        $this->doTest($expected, $input);
-    }
+                /**
+                 * Options:
+                 *
+                 *  * a: aaa
+                 *  * b: bbb
+                 *  * c: ccc
+                 */
+            EOF];
 
-    public function testWithTags()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * Hello there.
-     *
-     * @param string $foo
-     *
-     * @return bool
-     */
+        yield 'with tags' => [
+            <<<'EOF'
+                <?php
+                    /**
+                     * Hello there.
+                     *
+                     * @param string $foo
+                     *
+                     * @return bool
+                     */
 
-EOF;
+                EOF,
+            <<<'EOF'
+                <?php
+                    /**
+                     * Hello there
+                     *
+                     * @param string $foo
+                     *
+                     * @return bool
+                     */
 
-        $input = <<<'EOF'
-<?php
-    /**
-     * Hello there
-     *
-     * @param string $foo
-     *
-     * @return bool
-     */
+                EOF,
+        ];
 
-EOF;
+        yield 'with long description' => [
+            <<<'EOF'
+                <?php
+                    /**
+                     * Hello there.
+                     *
+                     * Long description
+                     * goes here.
+                     *
+                     * @return bool
+                     */
 
-        $this->doTest($expected, $input);
-    }
+                EOF,
+            <<<'EOF'
+                <?php
+                    /**
+                     * Hello there
+                     *
+                     * Long description
+                     * goes here.
+                     *
+                     * @return bool
+                     */
 
-    public function testWithLongDescription()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * Hello there.
-     *
-     * Long description
-     * goes here.
-     *
-     * @return bool
-     */
+                EOF,
+        ];
 
-EOF;
+        yield 'crazy multiline comments' => [
+            <<<'EOF'
+                <?php
+                    /**
+                     * Clients accept an array of constructor parameters.
+                     *
+                     * Here's an example of creating a client using a URI template for the
+                     * client's base_url and an array of default request options to apply
+                     * to each request:
+                     *
+                     *     $client = new Client([
+                     *         'base_url' => [
+                     *              'https://www.foo.com/{version}/',
+                     *              ['version' => '123']
+                     *          ],
+                     *         'defaults' => [
+                     *             'timeout'         => 10,
+                     *             'allow_redirects' => false,
+                     *             'proxy'           => '192.168.16.1:10'
+                     *         ]
+                     *     ]);
+                     *
+                     * @param _AutogeneratedInputConfiguration $config Client configuration settings
+                     *     - base_url: Base URL of the client that is merged into relative URLs.
+                     *       Can be a string or an array that contains a URI template followed
+                     *       by an associative array of expansion variables to inject into the
+                     *       URI template.
+                     *     - handler: callable RingPHP handler used to transfer requests
+                     *     - message_factory: Factory used to create request and response object
+                     *     - defaults: Default request options to apply to each request
+                     *     - emitter: Event emitter used for request events
+                     *     - fsm: (internal use only) The request finite state machine. A
+                     *       function that accepts a transaction and optional final state. The
+                     *       function is responsible for transitioning a request through its
+                     *       lifecycle events.
+                     * @param string $foo
+                     */
 
-        $input = <<<'EOF'
-<?php
-    /**
-     * Hello there
-     *
-     * Long description
-     * goes here.
-     *
-     * @return bool
-     */
+                EOF,
+            <<<'EOF'
+                <?php
+                    /**
+                     * Clients accept an array of constructor parameters
+                     *
+                     * Here's an example of creating a client using a URI template for the
+                     * client's base_url and an array of default request options to apply
+                     * to each request:
+                     *
+                     *     $client = new Client([
+                     *         'base_url' => [
+                     *              'https://www.foo.com/{version}/',
+                     *              ['version' => '123']
+                     *          ],
+                     *         'defaults' => [
+                     *             'timeout'         => 10,
+                     *             'allow_redirects' => false,
+                     *             'proxy'           => '192.168.16.1:10'
+                     *         ]
+                     *     ]);
+                     *
+                     * @param _AutogeneratedInputConfiguration $config Client configuration settings
+                     *     - base_url: Base URL of the client that is merged into relative URLs.
+                     *       Can be a string or an array that contains a URI template followed
+                     *       by an associative array of expansion variables to inject into the
+                     *       URI template.
+                     *     - handler: callable RingPHP handler used to transfer requests
+                     *     - message_factory: Factory used to create request and response object
+                     *     - defaults: Default request options to apply to each request
+                     *     - emitter: Event emitter used for request events
+                     *     - fsm: (internal use only) The request finite state machine. A
+                     *       function that accepts a transaction and optional final state. The
+                     *       function is responsible for transitioning a request through its
+                     *       lifecycle events.
+                     * @param string $foo
+                     */
 
-EOF;
+                EOF,
+        ];
 
-        $this->doTest($expected, $input);
-    }
+        yield 'with no description' => [<<<'EOF'
+            <?php
+                /**
+                 * @return bool
+                 */
 
-    public function testCrazyMultiLineComments()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * Clients accept an array of constructor parameters.
-     *
-     * Here's an example of creating a client using an URI template for the
-     * client's base_url and an array of default request options to apply
-     * to each request:
-     *
-     *     $client = new Client([
-     *         'base_url' => [
-     *              'http://www.foo.com/{version}/',
-     *              ['version' => '123']
-     *          ],
-     *         'defaults' => [
-     *             'timeout'         => 10,
-     *             'allow_redirects' => false,
-     *             'proxy'           => '192.168.16.1:10'
-     *         ]
-     *     ]);
-     *
-     * @param array $config Client configuration settings
-     *     - base_url: Base URL of the client that is merged into relative URLs.
-     *       Can be a string or an array that contains a URI template followed
-     *       by an associative array of expansion variables to inject into the
-     *       URI template.
-     *     - handler: callable RingPHP handler used to transfer requests
-     *     - message_factory: Factory used to create request and response object
-     *     - defaults: Default request options to apply to each request
-     *     - emitter: Event emitter used for request events
-     *     - fsm: (internal use only) The request finite state machine. A
-     *       function that accepts a transaction and optional final state. The
-     *       function is responsible for transitioning a request through its
-     *       lifecycle events.
-     * @param string $foo
-     */
+            EOF];
 
-EOF;
-
-        $input = <<<'EOF'
-<?php
-    /**
-     * Clients accept an array of constructor parameters
-     *
-     * Here's an example of creating a client using an URI template for the
-     * client's base_url and an array of default request options to apply
-     * to each request:
-     *
-     *     $client = new Client([
-     *         'base_url' => [
-     *              'http://www.foo.com/{version}/',
-     *              ['version' => '123']
-     *          ],
-     *         'defaults' => [
-     *             'timeout'         => 10,
-     *             'allow_redirects' => false,
-     *             'proxy'           => '192.168.16.1:10'
-     *         ]
-     *     ]);
-     *
-     * @param array $config Client configuration settings
-     *     - base_url: Base URL of the client that is merged into relative URLs.
-     *       Can be a string or an array that contains a URI template followed
-     *       by an associative array of expansion variables to inject into the
-     *       URI template.
-     *     - handler: callable RingPHP handler used to transfer requests
-     *     - message_factory: Factory used to create request and response object
-     *     - defaults: Default request options to apply to each request
-     *     - emitter: Event emitter used for request events
-     *     - fsm: (internal use only) The request finite state machine. A
-     *       function that accepts a transaction and optional final state. The
-     *       function is responsible for transitioning a request through its
-     *       lifecycle events.
-     * @param string $foo
-     */
-
-EOF;
-
-        $this->doTest($expected, $input);
-    }
-
-    public function testWithNoDescription()
-    {
-        $expected = <<<'EOF'
-<?php
-    /**
-     * @return bool
-     */
-
-EOF;
-
-        $this->doTest($expected);
-    }
-
-    public function testWithInheritDoc()
-    {
-        $expected = <<<'EOF'
-<?php
+        yield 'inheritdoc in braces' => [
+            '<?php
     /**
      * {@inheritdoc}
      */
+',
+        ];
 
-EOF;
-
-        $this->doTest($expected);
-    }
-
-    public function testEmptyDocBlock()
-    {
-        $expected = <<<'EOF'
-<?php
+        yield 'inheritdoc' => [
+            '<?php
     /**
-     *
+     * @inheritDoc
      */
+',
+        ];
 
-EOF;
+        yield 'empty doc block' => [<<<'EOF'
+            <?php
+                /**
+                 *
+                 */
 
-        $this->doTest($expected);
-    }
+            EOF];
 
-    /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideMessyWhitespacesCases
-     */
-    public function testMessyWhitespaces($expected, $input = null)
-    {
-        $this->fixer->setWhitespacesConfig(new WhitespacesFixerConfig("\t", "\r\n"));
-
-        $this->doTest($expected, $input);
-    }
-
-    public function provideMessyWhitespacesCases()
-    {
-        return [
-            [
-                "<?php\r\n\t/**\r\n\t * Hello there.\r\n\t */",
-                "<?php\r\n\t/**\r\n\t * Hello there\r\n\t */",
-            ],
+        yield 'tabs and windows line endings' => [
+            "<?php\r\n\t/**\r\n\t * Hello there.\r\n\t */",
+            "<?php\r\n\t/**\r\n\t * Hello there\r\n\t */",
+            new WhitespacesFixerConfig("\t", "\r\n"),
         ];
     }
 }

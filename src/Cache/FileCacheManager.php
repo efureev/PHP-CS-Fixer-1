@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -11,6 +13,8 @@
  */
 
 namespace PhpCsFixer\Cache;
+
+use PhpCsFixer\Hasher;
 
 /**
  * Class supports caching information about state of fixing files.
@@ -27,99 +31,117 @@ namespace PhpCsFixer\Cache;
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
  *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class FileCacheManager implements CacheManagerInterface
 {
-    /**
-     * @var FileHandlerInterface
-     */
-    private $handler;
+    public const WRITE_FREQUENCY = 10;
 
-    /**
-     * @var SignatureInterface
-     */
-    private $signature;
+    private FileHandlerInterface $handler;
 
-    /**
-     * @var CacheInterface
-     */
-    private $cache;
+    private SignatureInterface $signature;
 
-    /**
-     * @var bool
-     */
-    private $isDryRun;
+    private bool $isDryRun;
 
-    /**
-     * @var DirectoryInterface
-     */
-    private $cacheDirectory;
+    private DirectoryInterface $cacheDirectory;
 
-    /**
-     * @param FileHandlerInterface    $handler
-     * @param SignatureInterface      $signature
-     * @param bool                    $isDryRun
-     * @param null|DirectoryInterface $cacheDirectory
-     */
+    private int $writeCounter = 0;
+
+    private bool $signatureWasUpdated = false;
+
+    private CacheInterface $cache;
+
     public function __construct(
         FileHandlerInterface $handler,
         SignatureInterface $signature,
-        $isDryRun = false,
-        DirectoryInterface $cacheDirectory = null
+        bool $isDryRun = false,
+        ?DirectoryInterface $cacheDirectory = null
     ) {
         $this->handler = $handler;
         $this->signature = $signature;
         $this->isDryRun = $isDryRun;
-        $this->cacheDirectory = $cacheDirectory ?: new Directory('');
+        $this->cacheDirectory = $cacheDirectory ?? new Directory('');
 
         $this->readCache();
     }
 
     public function __destruct()
     {
-        $this->writeCache();
+        if (true === $this->signatureWasUpdated || 0 !== $this->writeCounter) {
+            $this->writeCache();
+        }
     }
 
-    public function needFixing($file, $fileContent)
+    /**
+     * This class is not intended to be serialized,
+     * and cannot be deserialized (see __wakeup method).
+     */
+    public function __serialize(): array
+    {
+        throw new \BadMethodCallException('Cannot serialize '.__CLASS__);
+    }
+
+    /**
+     * Disable the deserialization of the class to prevent attacker executing
+     * code by leveraging the __destruct method.
+     *
+     * @param array<string, mixed> $data
+     *
+     * @see https://owasp.org/www-community/vulnerabilities/PHP_Object_Injection
+     */
+    public function __unserialize(array $data): void
+    {
+        throw new \BadMethodCallException('Cannot unserialize '.__CLASS__);
+    }
+
+    public function needFixing(string $file, string $fileContent): bool
     {
         $file = $this->cacheDirectory->getRelativePathTo($file);
 
         return !$this->cache->has($file) || $this->cache->get($file) !== $this->calcHash($fileContent);
     }
 
-    public function setFile($file, $fileContent)
+    public function setFile(string $file, string $fileContent): void
+    {
+        $this->setFileHash($file, $this->calcHash($fileContent));
+    }
+
+    public function setFileHash(string $file, string $hash): void
     {
         $file = $this->cacheDirectory->getRelativePathTo($file);
 
-        $hash = $this->calcHash($fileContent);
-
         if ($this->isDryRun && $this->cache->has($file) && $this->cache->get($file) !== $hash) {
             $this->cache->clear($file);
-
-            return;
+        } else {
+            $this->cache->set($file, $hash);
         }
 
-        $this->cache->set($file, $hash);
+        if (self::WRITE_FREQUENCY === ++$this->writeCounter) {
+            $this->writeCounter = 0;
+            $this->writeCache();
+        }
     }
 
-    private function readCache()
+    private function readCache(): void
     {
         $cache = $this->handler->read();
 
-        if (!$cache || !$this->signature->equals($cache->getSignature())) {
+        if (null === $cache || !$this->signature->equals($cache->getSignature())) {
             $cache = new Cache($this->signature);
+            $this->signatureWasUpdated = true;
         }
 
         $this->cache = $cache;
     }
 
-    private function writeCache()
+    private function writeCache(): void
     {
         $this->handler->write($this->cache);
     }
 
-    private function calcHash($content)
+    private function calcHash(string $content): string
     {
-        return crc32($content);
+        return Hasher::calculate($content);
     }
 }

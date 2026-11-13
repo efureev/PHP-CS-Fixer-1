@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,87 +14,101 @@
 
 namespace PhpCsFixer\Tests\Fixer\NamespaceNotation;
 
+use PhpCsFixer\Fixer\NamespaceNotation\BlankLineAfterNamespaceFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
 use PhpCsFixer\WhitespacesFixerConfig;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\NamespaceNotation\BlankLineAfterNamespaceFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\NamespaceNotation\BlankLineAfterNamespaceFixer>
+ *
+ * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(BlankLineAfterNamespaceFixer::class)]
 final class BlankLineAfterNamespaceFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php namespace A\B?>
+        yield [
+            '<?php namespace A\B?>
                 <?php
                     for($i=0; $i<10; ++$i) {echo $i;}',
-            ],
-            [
-                '<?php namespace A\B?>',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php namespace A\B?>',
+        ];
+
+        yield [
+            '<?php
 namespace A\B;
 
 class C {}
 ',
-                '<?php
+            '<?php
 namespace A\B;
 
 
 
 class C {}
 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 namespace A\B;
 
 class C {}
 ',
-                '<?php
+            '<?php
 namespace A\B;
 class C {}
 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 namespace A\B;
 
 class C {}
 ',
-                '<?php
+            '<?php
 namespace A\B;  class C {}
 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 namespace A\B;
 
 class C {}
 ',
-                '<?php
+            '<?php
 namespace A\B;class C {}
 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 namespace A\B {
     class C {
         public $foo;
@@ -100,71 +116,159 @@ namespace A\B {
     }
 }
 ',
-            ],
-            [
-                "<?php\rnamespace A\\B;
+        ];
+
+        yield [
+            "<?php\rnamespace A\\B;
 
 class C {}\r",
-                "<?php\rnamespace A\\B;\r\r\r\r\r\rclass C {}\r",
-            ],
-            [
-                '<?php
+            "<?php\rnamespace A\\B;\r\r\r\r\r\rclass C {}\r",
+        ];
+
+        yield [
+            '<?php
 namespace A\B;
 
 namespace\C\func();
 foo();
 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 namespace Foo;
 ',
-                '<?php
+            '<?php
 namespace Foo;
 
 
 
 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
+namespace Foo;
+',
+            '<?php
+namespace Foo;',
+        ];
+
+        yield [
+            '<?php
 namespace Foo;
 
 ?>',
-                '<?php
+            '<?php
 namespace Foo;
 
 
 
 ?>',
-            ],
+        ];
+
+        yield [
+            '<?php
+    namespace Foo;
+
+    class Bar {}',
+        ];
+
+        yield [
+            '<?php
+  namespace Foo;
+
+      class Bar {}',
+            '<?php
+  namespace Foo;
+      class Bar {}',
+        ];
+
+        yield [
+            '<?php
+    namespace My\NS;
+
+    class X extends Y {}',
+        ];
+
+        yield [
+            '<?php
+namespace My\NS; // comment
+
+class X extends Y {}',
+        ];
+
+        yield [
+            '<?php
+namespace My\NS; /* comment */
+
+class X extends Y {}',
+        ];
+
+        yield [
+            '<?php
+namespace My\NS; /*
+comment 1
+comment 2
+*/
+
+class X extends Y {}',
+            '<?php
+namespace My\NS; /*
+comment 1
+comment 2
+*/
+class X extends Y {}',
+        ];
+
+        yield [
+            '<?php
+namespace My\NS; /** comment */
+
+class X extends Y {}',
+        ];
+
+        yield [
+            '<?php
+namespace My\NS; /**
+comment 1
+comment 2
+*/
+
+class X extends Y {}',
+            '<?php
+namespace My\NS; /**
+comment 1
+comment 2
+*/
+class X extends Y {}',
         ];
     }
 
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideMessyWhitespacesCases
+     * @dataProvider provideWithWhitespacesConfigCases
      */
-    public function testMessyWhitespaces($expected, $input = null)
+    #[DataProvider('provideWithWhitespacesConfigCases')]
+    public function testWithWhitespacesConfig(string $expected, ?string $input = null): void
     {
         $this->fixer->setWhitespacesConfig(new WhitespacesFixerConfig("\t", "\r\n"));
 
         $this->doTest($expected, $input);
     }
 
-    public function provideMessyWhitespacesCases()
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideWithWhitespacesConfigCases(): iterable
     {
-        return [
-            [
-                "<?php namespace A\\B;\r\n\r\nclass C {}",
-                '<?php namespace A\\B;  class C {}',
-            ],
-            [
-                "<?php namespace A\\B;\r\n\r\nclass C {}",
-                "<?php namespace A\\B;\r\n\r\n\r\n\r\n\r\n\r\nclass C {}",
-            ],
+        yield [
+            "<?php namespace A\\B;\r\n\r\nclass C {}",
+            '<?php namespace A\B;  class C {}',
+        ];
+
+        yield [
+            "<?php namespace A\\B;\r\n\r\nclass C {}",
+            "<?php namespace A\\B;\r\n\r\n\r\n\r\n\r\n\r\nclass C {}",
         ];
     }
 }

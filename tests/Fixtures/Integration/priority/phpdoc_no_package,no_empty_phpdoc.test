@@ -1,10 +1,9 @@
 --TEST--
-Integration of fixers: no_empty_phpdoc,phpdoc_no_package.
+Integration of fixers: phpdoc_no_package,no_empty_phpdoc.
 --RULESET--
 {"phpdoc_no_package": true, "no_empty_phpdoc": true}
 --EXPECT--
 <?php
-
 
 
 

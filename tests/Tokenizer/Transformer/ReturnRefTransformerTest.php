@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,6 +16,9 @@ namespace PhpCsFixer\Tests\Tokenizer\Transformer;
 
 use PhpCsFixer\Tests\Test\AbstractTransformerTestCase;
 use PhpCsFixer\Tokenizer\CT;
+use PhpCsFixer\Tokenizer\Transformer\ReturnRefTransformer;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
@@ -21,40 +26,60 @@ use PhpCsFixer\Tokenizer\CT;
  * @internal
  *
  * @covers \PhpCsFixer\Tokenizer\Transformer\ReturnRefTransformer
+ *
+ * @phpstan-import-type _TransformerTestExpectedKindsUnderIndex from AbstractTransformerTestCase
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(ReturnRefTransformer::class)]
 final class ReturnRefTransformerTest extends AbstractTransformerTestCase
 {
     /**
-     * @param string $source
+     * @param _TransformerTestExpectedKindsUnderIndex $expectedTokens
      *
      * @dataProvider provideProcessCases
      */
-    public function testProcess($source, array $expectedTokens = [])
+    #[DataProvider('provideProcessCases')]
+    public function testProcess(string $source, array $expectedTokens = []): void
     {
         $this->doTest(
             $source,
             $expectedTokens,
             [
                 CT::T_RETURN_REF,
-            ]
+            ],
         );
     }
 
-    public function provideProcessCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: _TransformerTestExpectedKindsUnderIndex}>
+     */
+    public static function provideProcessCases(): iterable
     {
-        return [
+        yield [
+            '<?php function & foo(): array { return []; }',
             [
-                '<?php function & foo(): array { return []; }',
-                [
-                    3 => CT::T_RETURN_REF,
-                ],
+                3 => CT::T_RETURN_REF,
             ],
+        ];
+
+        yield [
+            '<?php $a = 1 & 2;',
+        ];
+
+        yield [
+            '<?php function fnc(array & $arr) {}',
+        ];
+
+        yield [
+            '<?php fn &(): array => [];',
             [
-                '<?php $a = 1 & 2;',
+                3 => CT::T_RETURN_REF,
             ],
-            [
-                '<?php function fnc(array & $arr) {}',
-            ],
+        ];
+
+        yield [
+            '<?php fn (array & $arr) => null;',
         ];
     }
 }

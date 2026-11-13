@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,43 +14,89 @@
 
 namespace PhpCsFixer\Tests\Fixer\ArrayNotation;
 
+use PhpCsFixer\Fixer\ArrayNotation\NormalizeIndexBraceFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
- * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\ArrayNotation\NormalizeIndexBraceFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\ArrayNotation\NormalizeIndexBraceFixer>
+ *
+ * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NormalizeIndexBraceFixer::class)]
 final class NormalizeIndexBraceFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
+     * @requires PHP < 8.0.0
      *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[RequiresPhp('< 8.0.0')]
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php echo $arr[$index];',
-                '<?php echo $arr{$index};',
-            ],
-            [
-                '<?php echo $nestedArray[$index][$index2][$index3][$index4];',
-                '<?php echo $nestedArray{$index}{$index2}[$index3]{$index4};',
-            ],
-            [
-                '<?php echo $array[0]->foo . $collection->items[1]->property;',
-                '<?php echo $array{0}->foo . $collection->items{1}->property;',
-            ],
+        yield [
+            '<?php echo $arr[$index];',
+            '<?php echo $arr{$index};',
+        ];
+
+        yield [
+            '<?php echo $nestedArray[$index][$index2][$index3][$index4];',
+            '<?php echo $nestedArray{$index}{$index2}[$index3]{$index4};',
+        ];
+
+        yield [
+            '<?php echo $array[0]->foo . $collection->items[1]->property;',
+            '<?php echo $array{0}->foo . $collection->items{1}->property;',
+        ];
+    }
+
+    /**
+     * @requires PHP >= 8.4.0
+     *
+     * @dataProvider provideFix84Cases
+     */
+    #[RequiresPhp('>= 8.4.0')]
+    #[DataProvider('provideFix84Cases')]
+    public function testFix84(string $expected, ?string $input = null): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1?: string}>
+     */
+    public static function provideFix84Cases(): iterable
+    {
+        yield 'property hooks: property without default value' => [
+            <<<'PHP'
+                <?php
+
+                class PropertyHooks
+                {
+                    public string $bar {
+                        set(string $value) {
+                            $this -> foo = strtolower($value);
+                        }
+                    }
+                }
+                PHP,
         ];
     }
 }

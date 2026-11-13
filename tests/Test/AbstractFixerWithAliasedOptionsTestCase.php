@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,31 +14,36 @@
 
 namespace PhpCsFixer\Tests\Test;
 
-use PhpCsFixer\Fixer\ConfigurationDefinitionFixerInterface;
+use PhpCsFixer\AbstractFixer;
+use PhpCsFixer\Fixer\ConfigurableFixerInterface;
 use PhpCsFixer\FixerConfiguration\AliasedFixerOption;
 
 /**
- * @author ntzm
- *
  * @internal
  *
- * @todo 3.0 Drop this class
+ * @template TFixer of AbstractFixer
+ *
+ * @extends AbstractFixerTestCase<TFixer>
+ *
+ * @author ntzm
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 abstract class AbstractFixerWithAliasedOptionsTestCase extends AbstractFixerTestCase
 {
     /**
-     * @var null|\PhpCsFixer\Fixer\ConfigurableFixerInterface
+     * @var null|TFixer
      */
-    private $fixerWithAliasedConfig;
+    private ?AbstractFixer $fixerWithAliasedConfig = null;
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         parent::tearDown();
 
         $this->fixerWithAliasedConfig = null;
     }
 
-    protected function doTest($expected, $input = null, \SplFileInfo $file = null)
+    protected function doTest(string $expected, ?string $input = null, ?\SplFileInfo $file = null): void
     {
         parent::doTest($expected, $input, $file);
 
@@ -54,10 +61,13 @@ abstract class AbstractFixerWithAliasedOptionsTestCase extends AbstractFixerTest
         }
     }
 
-    protected function configureFixerWithAliasedOptions(array $configuration)
+    /**
+     * @param array<string, mixed> $configuration
+     */
+    protected function configureFixerWithAliasedOptions(array $configuration): void
     {
-        if (!$this->fixer instanceof ConfigurationDefinitionFixerInterface) {
-            throw new \LogicException('Fixer is not configurable');
+        if (!$this->fixer instanceof ConfigurableFixerInterface) {
+            throw new \LogicException('Fixer is not configurable.');
         }
 
         $this->fixer->configure($configuration);
@@ -73,14 +83,14 @@ abstract class AbstractFixerWithAliasedOptionsTestCase extends AbstractFixerTest
 
             $alias = $option->getAlias();
 
-            if (array_key_exists($alias, $configuration)) {
+            if (\array_key_exists($alias, $configuration)) {
                 $configuration[$option->getName()] = $configuration[$alias];
                 unset($configuration[$alias]);
             }
         }
 
         if (!$hasAliasedOptions) {
-            throw new \LogicException('Fixer has no aliased options');
+            throw new \LogicException('Fixer has no aliased options.');
         }
 
         $this->fixerWithAliasedConfig = clone $this->fixer;

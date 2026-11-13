@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -15,76 +17,95 @@ namespace PhpCsFixer\Fixer\LanguageConstruct;
 use PhpCsFixer\AbstractFunctionReferenceFixer;
 use PhpCsFixer\FixerDefinition\CodeSample;
 use PhpCsFixer\FixerDefinition\FixerDefinition;
+use PhpCsFixer\FixerDefinition\FixerDefinitionInterface;
 use PhpCsFixer\Tokenizer\Token;
 use PhpCsFixer\Tokenizer\Tokens;
 
 /**
  * @author Vladimir Reznichenko <kalessil@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class DirConstantFixer extends AbstractFunctionReferenceFixer
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function getDefinition()
+    public function getDefinition(): FixerDefinitionInterface
     {
         return new FixerDefinition(
             'Replaces `dirname(__FILE__)` expression with equivalent `__DIR__` constant.',
             [new CodeSample("<?php\n\$a = dirname(__FILE__);\n")],
             null,
-            'Risky when the function `dirname` is overridden.'
+            'Risky when the function `dirname` is overridden.',
         );
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function isCandidate(Tokens $tokens)
+    public function isCandidate(Tokens $tokens): bool
     {
-        return $tokens->isTokenKindFound(T_FILE);
+        return $tokens->isAllTokenKindsFound([\T_STRING, \T_FILE]);
     }
 
     /**
      * {@inheritdoc}
+     *
+     * Must run before CombineNestedDirnameFixer.
      */
-    public function getPriority()
+    public function getPriority(): int
     {
-        // should run before CombineNestedDirnameFixer
-        return 4;
+        return 40;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function applyFix(\SplFileInfo $file, Tokens $tokens)
+    protected function applyFix(\SplFileInfo $file, Tokens $tokens): void
     {
         $currIndex = 0;
-        while (null !== $currIndex) {
+
+        while (true) {
             $boundaries = $this->find('dirname', $tokens, $currIndex, $tokens->count() - 1);
             if (null === $boundaries) {
                 return;
             }
 
-            list($functionNameIndex, $openParenthesis, $closeParenthesis) = $boundaries;
+            [$functionNameIndex, $openParenthesis, $closeParenthesis] = $boundaries;
 
             // analysing cursor shift, so nested expressions kept processed
             $currIndex = $openParenthesis;
 
             // ensure __FILE__ is in between (...)
+
             $fileCandidateRightIndex = $tokens->getPrevMeaningfulToken($closeParenthesis);
+            $trailingCommaIndex = null;
+
+            if ($tokens[$fileCandidateRightIndex]->equals(',')) {
+                $trailingCommaIndex = $fileCandidateRightIndex;
+                $fileCandidateRightIndex = $tokens->getPrevMeaningfulToken($fileCandidateRightIndex);
+            }
+
             $fileCandidateRight = $tokens[$fileCandidateRightIndex];
+
+            if (!$fileCandidateRight->isGivenKind(\T_FILE)) {
+                continue;
+            }
+
             $fileCandidateLeftIndex = $tokens->getNextMeaningfulToken($openParenthesis);
             $fileCandidateLeft = $tokens[$fileCandidateLeftIndex];
-            if (!$fileCandidateRight->isGivenKind(T_FILE) || !$fileCandidateLeft->isGivenKind(T_FILE)) {
+
+            if (!$fileCandidateLeft->isGivenKind(\T_FILE)) {
                 continue;
             }
 
             // get rid of root namespace when it used
             $namespaceCandidateIndex = $tokens->getPrevMeaningfulToken($functionNameIndex);
             $namespaceCandidate = $tokens[$namespaceCandidateIndex];
-            if ($namespaceCandidate->isGivenKind(T_NS_SEPARATOR)) {
+
+            if ($namespaceCandidate->isGivenKind(\T_NS_SEPARATOR)) {
                 $tokens->removeTrailingWhitespace($namespaceCandidateIndex);
                 $tokens->clearAt($namespaceCandidateIndex);
+            }
+
+            if (null !== $trailingCommaIndex) {
+                if (!$tokens[$tokens->getNextNonWhitespace($trailingCommaIndex)]->isComment()) {
+                    $tokens->removeTrailingWhitespace($trailingCommaIndex);
+                }
+
+                $tokens->clearTokenAndMergeSurroundingWhitespace($trailingCommaIndex);
             }
 
             // closing parenthesis removed with leading spaces
@@ -92,7 +113,7 @@ final class DirConstantFixer extends AbstractFunctionReferenceFixer
                 $tokens->removeLeadingWhitespace($closeParenthesis);
             }
 
-            $tokens->clearAt($closeParenthesis);
+            $tokens->clearTokenAndMergeSurroundingWhitespace($closeParenthesis);
 
             // opening parenthesis removed with trailing and leading spaces
             if (!$tokens[$tokens->getNextNonWhitespace($openParenthesis)]->isComment()) {
@@ -100,11 +121,11 @@ final class DirConstantFixer extends AbstractFunctionReferenceFixer
             }
 
             $tokens->removeTrailingWhitespace($openParenthesis);
-            $tokens->clearAt($openParenthesis);
+            $tokens->clearTokenAndMergeSurroundingWhitespace($openParenthesis);
 
             // replace constant and remove function name
-            $tokens[$fileCandidateLeftIndex] = new Token([T_DIR, '__DIR__']);
-            $tokens->clearAt($functionNameIndex);
+            $tokens[$fileCandidateLeftIndex] = new Token([\T_DIR, '__DIR__']);
+            $tokens->clearTokenAndMergeSurroundingWhitespace($functionNameIndex);
         }
     }
 }

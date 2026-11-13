@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,63 +14,71 @@
 
 namespace PhpCsFixer\Tests\Fixer\Alias;
 
+use PhpCsFixer\Fixer\Alias\BacktickToShellExecFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Filippo Tessarotto <zoeslam@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Alias\BacktickToShellExecFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Alias\BacktickToShellExecFixer>
+ *
+ * @author Filippo Tessarotto <zoeslam@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(BacktickToShellExecFixer::class)]
 final class BacktickToShellExecFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<string, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            'plain' => [
-                '<?php shell_exec("ls -lah");',
-                '<?php `ls -lah`;',
-            ],
-            'with variables' => [
-                '<?php shell_exec("$var1 ls ${var2} -lah {$var3} file1.txt {$var4[0]} file2.txt {$var5->call()}");',
-                '<?php `$var1 ls ${var2} -lah {$var3} file1.txt {$var4[0]} file2.txt {$var5->call()}`;',
-            ],
-            'with single quote' => [
-                <<<'EOT'
-<?php
-`echo a\'b`;
-`echo 'ab'`;
-EOT
-                ,
-            ],
-            'with double quote' => [
-                <<<'EOT'
-<?php
-`echo a\"b`;
-`echo 'a"b'`;
-EOT
-                ,
-            ],
-            'with backtick' => [
-                <<<'EOT'
-<?php
-`echo 'a\`b'`;
-`echo a\\\`b`;
-EOT
-                ,
-            ],
+        yield 'plain' => [
+            '<?php shell_exec("ls -lah");',
+            '<?php `ls -lah`;',
+        ];
+
+        yield 'with variables' => [
+            '<?php shell_exec("$var1 ls ${var2} -lah {$var3} file1.txt {$var4[0]} file2.txt {$var5->call()}");',
+            '<?php `$var1 ls ${var2} -lah {$var3} file1.txt {$var4[0]} file2.txt {$var5->call()}`;',
+        ];
+
+        yield 'with single quote' => [
+            <<<'EOT'
+                <?php
+                `echo a\'b`;
+                `echo 'ab'`;
+                EOT,
+        ];
+
+        yield 'with double quote' => [
+            <<<'EOT'
+                <?php
+                `echo a\"b`;
+                `echo 'a"b'`;
+                EOT,
+        ];
+
+        yield 'with backtick' => [
+            <<<'EOT'
+                <?php
+                `echo 'a\`b'`;
+                `echo a\\\`b`;
+                EOT,
         ];
     }
 }

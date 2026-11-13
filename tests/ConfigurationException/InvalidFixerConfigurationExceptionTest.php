@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -15,6 +17,7 @@ namespace PhpCsFixer\Tests\ConfigurationException;
 use PhpCsFixer\ConfigurationException\InvalidFixerConfigurationException;
 use PhpCsFixer\Console\Command\FixCommandExitStatusCalculator;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @author Andreas Möller <am@localheinz.com>
@@ -22,33 +25,29 @@ use PhpCsFixer\Tests\TestCase;
  * @internal
  *
  * @covers \PhpCsFixer\ConfigurationException\InvalidFixerConfigurationException
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(InvalidFixerConfigurationException::class)]
 final class InvalidFixerConfigurationExceptionTest extends TestCase
 {
-    public function testIsInvalidArgumentException()
-    {
-        $exception = new InvalidFixerConfigurationException('foo', 'I cannot do that, Dave.');
-
-        $this->assertInstanceOf(\PhpCsFixer\ConfigurationException\InvalidConfigurationException::class, $exception);
-    }
-
-    public function testDefaults()
+    public function testDefaults(): void
     {
         $fixerName = 'hal';
         $message = 'I cannot do that, Dave.';
 
         $exception = new InvalidFixerConfigurationException(
             $fixerName,
-            $message
+            $message,
         );
 
-        $this->assertSame(sprintf('[%s] %s', $fixerName, $message), $exception->getMessage());
-        $this->assertSame(FixCommandExitStatusCalculator::EXIT_STATUS_FLAG_HAS_INVALID_FIXER_CONFIG, $exception->getCode());
-        $this->assertSame($fixerName, $exception->getFixerName());
-        $this->assertNull($exception->getPrevious());
+        self::assertSame(\sprintf('[%s] %s', $fixerName, $message), $exception->getMessage());
+        self::assertSame(FixCommandExitStatusCalculator::EXIT_STATUS_FLAG_HAS_INVALID_FIXER_CONFIG, $exception->getCode());
+        self::assertSame($fixerName, $exception->getFixerName());
+        self::assertNull($exception->getPrevious());
     }
 
-    public function testConstructorSetsValues()
+    public function testConstructorSetsValues(): void
     {
         $fixerName = 'hal';
         $message = 'I cannot do that, Dave.';
@@ -57,12 +56,12 @@ final class InvalidFixerConfigurationExceptionTest extends TestCase
         $exception = new InvalidFixerConfigurationException(
             $fixerName,
             $message,
-            $previous
+            $previous,
         );
 
-        $this->assertSame(sprintf('[%s] %s', $fixerName, $message), $exception->getMessage());
-        $this->assertSame(FixCommandExitStatusCalculator::EXIT_STATUS_FLAG_HAS_INVALID_FIXER_CONFIG, $exception->getCode());
-        $this->assertSame($fixerName, $exception->getFixerName());
-        $this->assertSame($previous, $exception->getPrevious());
+        self::assertSame(\sprintf('[%s] %s', $fixerName, $message), $exception->getMessage());
+        self::assertSame(FixCommandExitStatusCalculator::EXIT_STATUS_FLAG_HAS_INVALID_FIXER_CONFIG, $exception->getCode());
+        self::assertSame($fixerName, $exception->getFixerName());
+        self::assertSame($previous, $exception->getPrevious());
     }
 }

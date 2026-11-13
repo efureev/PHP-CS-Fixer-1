@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,6 +16,7 @@ namespace PhpCsFixer\Tests\FixerDefinition;
 
 use PhpCsFixer\FixerDefinition\FileSpecificCodeSample;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @author Andreas Möller <am@localheinz.com>
@@ -21,37 +24,34 @@ use PhpCsFixer\Tests\TestCase;
  * @internal
  *
  * @covers \PhpCsFixer\FixerDefinition\FileSpecificCodeSample
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(FileSpecificCodeSample::class)]
 final class FileSpecificCodeSampleTest extends TestCase
 {
-    public function testImplementsFileSpecificCodeSampleInterface()
-    {
-        $sample = new FileSpecificCodeSample(
-            file_get_contents(__FILE__),
-            new \SplFileInfo(__FILE__)
-        );
-
-        $this->assertInstanceOf(\PhpCsFixer\FixerDefinition\FileSpecificCodeSampleInterface::class, $sample);
-    }
-
-    public function testDefaults()
+    public function testDefaults(): void
     {
         $code = file_get_contents(__FILE__);
+        self::assertIsString($code);
+
         $splFileInfo = new \SplFileInfo(__FILE__);
 
         $sample = new FileSpecificCodeSample(
             $code,
-            $splFileInfo
+            $splFileInfo,
         );
 
-        $this->assertSame($code, $sample->getCode());
-        $this->assertSame($splFileInfo, $sample->getSplFileInfo());
-        $this->assertNull($sample->getConfiguration());
+        self::assertSame($code, $sample->getCode());
+        self::assertSame($splFileInfo, $sample->getSplFileInfo());
+        self::assertNull($sample->getConfiguration());
     }
 
-    public function testConstructorSetsValues()
+    public function testConstructorSetsValues(): void
     {
         $code = file_get_contents(__FILE__);
+        self::assertIsString($code);
+
         $splFileInfo = new \SplFileInfo(__FILE__);
         $configuration = [
             'foo' => 'bar',
@@ -61,11 +61,11 @@ final class FileSpecificCodeSampleTest extends TestCase
         $sample = new FileSpecificCodeSample(
             $code,
             $splFileInfo,
-            $configuration
+            $configuration,
         );
 
-        $this->assertSame($code, $sample->getCode());
-        $this->assertSame($splFileInfo, $sample->getSplFileInfo());
-        $this->assertSame($configuration, $sample->getConfiguration());
+        self::assertSame($code, $sample->getCode());
+        self::assertSame($splFileInfo, $sample->getSplFileInfo());
+        self::assertSame($configuration, $sample->getConfiguration());
     }
 }

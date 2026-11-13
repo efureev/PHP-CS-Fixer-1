@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,6 +16,9 @@ namespace PhpCsFixer\Tests\Tokenizer\Transformer;
 
 use PhpCsFixer\Tests\Test\AbstractTransformerTestCase;
 use PhpCsFixer\Tokenizer\CT;
+use PhpCsFixer\Tokenizer\Transformer\NamespaceOperatorTransformer;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @author Gregor Harlan <gharlan@web.de>
@@ -21,38 +26,45 @@ use PhpCsFixer\Tokenizer\CT;
  * @internal
  *
  * @covers \PhpCsFixer\Tokenizer\Transformer\NamespaceOperatorTransformer
+ *
+ * @phpstan-import-type _TransformerTestExpectedKindsUnderIndex from AbstractTransformerTestCase
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NamespaceOperatorTransformer::class)]
 final class NamespaceOperatorTransformerTest extends AbstractTransformerTestCase
 {
     /**
-     * @param string $source
+     * @param _TransformerTestExpectedKindsUnderIndex $expectedTokens
      *
      * @dataProvider provideProcessCases
      */
-    public function testProcess($source, array $expectedTokens)
+    #[DataProvider('provideProcessCases')]
+    public function testProcess(string $source, array $expectedTokens): void
     {
         $this->doTest(
             $source,
             $expectedTokens,
             [
-                T_NAMESPACE,
+                \T_NAMESPACE,
                 CT::T_NAMESPACE_OPERATOR,
-            ]
+            ],
         );
     }
 
-    public function provideProcessCases()
+    /**
+     * @return iterable<int, array{string, _TransformerTestExpectedKindsUnderIndex}>
+     */
+    public static function provideProcessCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
 namespace Foo;
 namespace\Bar\baz();
 ',
-                [
-                    1 => T_NAMESPACE,
-                    6 => CT::T_NAMESPACE_OPERATOR,
-                ],
+            [
+                1 => \T_NAMESPACE,
+                6 => CT::T_NAMESPACE_OPERATOR,
             ],
         ];
     }

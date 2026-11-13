@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,36 +14,39 @@
 
 namespace PhpCsFixer\Tests;
 
+use PhpCsFixer\Console\Application;
 use PhpCsFixer\ToolInfo;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
  * @covers \PhpCsFixer\ToolInfo
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(ToolInfo::class)]
 final class ToolInfoTest extends TestCase
 {
-    public function testGetVersion()
+    public function testGetVersion(): void
     {
         $toolInfo = new ToolInfo();
-        $this->assertInternalType('string', $toolInfo->getVersion());
+        self::assertStringStartsWith(Application::VERSION, $toolInfo->getVersion());
     }
 
-    public function testIsInstallAsPhar()
+    public function testIsInstallAsPhar(): void
     {
         $toolInfo = new ToolInfo();
-        $this->assertFalse($toolInfo->isInstalledAsPhar());
+        self::assertFalse($toolInfo->isInstalledAsPhar());
     }
 
-    public function testIsInstalledByComposer()
+    public function testIsInstalledByComposer(): void
     {
         $toolInfo = new ToolInfo();
-        $this->assertFalse($toolInfo->isInstalledByComposer());
+        self::assertFalse($toolInfo->isInstalledByComposer());
     }
 
-    public function testGetComposerVersionThrowsExceptionIfOutsideComposerScope()
+    public function testGetComposerVersionThrowsExceptionIfOutsideComposerScope(): void
     {
         $toolInfo = new ToolInfo();
 
@@ -50,12 +55,12 @@ final class ToolInfoTest extends TestCase
         $toolInfo->getComposerVersion();
     }
 
-    public function testGetPharDownloadUri()
+    public function testGetPharDownloadUri(): void
     {
         $toolInfo = new ToolInfo();
-        $this->assertSame(
-            'https://github.com/FriendsOfPHP/PHP-CS-Fixer/releases/download/foo/php-cs-fixer.phar',
-            $toolInfo->getPharDownloadUri('foo')
+        self::assertSame(
+            'https://github.com/PHP-CS-Fixer/PHP-CS-Fixer/releases/download/foo/php-cs-fixer.phar',
+            $toolInfo->getPharDownloadUri('foo'),
         );
     }
 }

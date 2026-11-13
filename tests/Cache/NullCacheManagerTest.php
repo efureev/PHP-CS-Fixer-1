@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,8 +14,10 @@
 
 namespace PhpCsFixer\Tests\Cache;
 
+use PhpCsFixer\Cache\CacheManagerInterface;
 use PhpCsFixer\Cache\NullCacheManager;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @author Andreas Möller <am@localheinz.com>
@@ -21,27 +25,32 @@ use PhpCsFixer\Tests\TestCase;
  * @internal
  *
  * @covers \PhpCsFixer\Cache\NullCacheManager
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NullCacheManager::class)]
 final class NullCacheManagerTest extends TestCase
 {
-    public function testIsFinal()
+    public function testIsFinal(): void
     {
-        $reflection = new \ReflectionClass(\PhpCsFixer\Cache\NullCacheManager::class);
+        $reflection = new \ReflectionClass(NullCacheManager::class);
 
-        $this->assertTrue($reflection->isFinal());
+        self::assertTrue($reflection->isFinal());
     }
 
-    public function testImplementsCacheManagerInterface()
+    public function testImplementsCacheManagerInterface(): void
     {
-        $reflection = new \ReflectionClass(\PhpCsFixer\Cache\NullCacheManager::class);
+        $reflection = new \ReflectionClass(NullCacheManager::class);
 
-        $this->assertTrue($reflection->implementsInterface(\PhpCsFixer\Cache\CacheManagerInterface::class));
+        self::assertTrue($reflection->implementsInterface(CacheManagerInterface::class));
     }
 
-    public function testNeedFixingReturnsTrue()
+    public function testNeedFixingReturnsTrue(): void
     {
         $manager = new NullCacheManager();
 
-        $this->assertTrue($manager->needFixing('foo.php', 'bar'));
+        self::assertTrue($manager->needFixing('foo.php', 'bar'));
+
+        $manager->setFile(__FILE__, 'XXX'); // no-op, should not raise an exception
     }
 }

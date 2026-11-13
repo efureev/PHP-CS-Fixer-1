@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -15,42 +17,30 @@ namespace PhpCsFixer;
 /**
  * File reader that unify access to regular file and stdin-alike file.
  *
- * Regular file could be read multiple times with `file_get_contents`, but file provided on stdin can not.
+ * Regular file could be read multiple times with `file_get_contents`, but file provided on stdin cannot.
  * Consecutive try will provide empty content for stdin-alike file.
  * This reader unifies access to them.
  *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class FileReader
 {
-    /**
-     * @var null|self
-     */
-    private static $instance;
+    private ?string $stdinContent = null;
 
-    /**
-     * @var null|string
-     */
-    private $stdinContent;
-
-    /**
-     * @return self
-     */
-    public static function createSingleton()
+    public static function createSingleton(): self
     {
-        if (null === self::$instance) {
-            self::$instance = new self();
+        static $instance = null;
+
+        if (!$instance) {
+            $instance = new self();
         }
 
-        return self::$instance;
+        return $instance;
     }
 
-    /**
-     * @param string $filePath
-     *
-     * @return string
-     */
-    public function read($filePath)
+    public function read(string $filePath): string
     {
         if ('php://stdin' === $filePath) {
             if (null === $this->stdinContent) {
@@ -63,22 +53,17 @@ final class FileReader
         return $this->readRaw($filePath);
     }
 
-    /**
-     * @param string $realPath
-     *
-     * @return string
-     */
-    private function readRaw($realPath)
+    private function readRaw(string $realPath): string
     {
         $content = @file_get_contents($realPath);
 
         if (false === $content) {
             $error = error_get_last();
 
-            throw new \RuntimeException(sprintf(
+            throw new \RuntimeException(\sprintf(
                 'Failed to read content from "%s".%s',
                 $realPath,
-                $error ? ' '.$error['message'] : ''
+                null !== $error ? ' '.$error['message'] : '',
             ));
         }
 

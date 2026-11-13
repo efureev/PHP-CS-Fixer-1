@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,36 +14,41 @@
 
 namespace PhpCsFixer\Tests\Fixer\PhpUnit;
 
+use PhpCsFixer\Fixer\PhpUnit\PhpUnitSetUpTearDownVisibilityFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Gert de Pagter
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\PhpUnit\PhpUnitSetUpTearDownVisibilityFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\PhpUnit\PhpUnitSetUpTearDownVisibilityFixer>
+ *
+ * @author Gert de Pagter
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(PhpUnitSetUpTearDownVisibilityFixer::class)]
 final class PhpUnitSetUpTearDownVisibilityFixerTest extends AbstractFixerTestCase
 {
     /**
      * @dataProvider provideFixCases
-     *
-     * @param mixed       $expected
-     * @param null|string $input
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
     /**
-     * @return array
+     * @return iterable<string, array{0: string, 1?: string}>
      */
-    public function provideFixCases()
+    public static function provideFixCases(): iterable
     {
-        return [
-            'setUp and tearDown are made protected if they are public' => [
-                '<?php
+        yield 'setUp and tearDown are made protected if they are public' => [
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     protected function setUp() {}
@@ -49,7 +56,7 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     protected function tearDown() {}
 }
 ',
-                '<?php
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     public function setUp() {}
@@ -57,9 +64,10 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     public function tearDown() {}
 }
 ',
-            ],
-            'Other functions are ignored' => [
-                '<?php
+        ];
+
+        yield 'Other functions are ignored' => [
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     public function hello() {}
@@ -75,7 +83,7 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     private function privateHelperFunction() {}
 }
 ',
-                '<?php
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     public function hello() {}
@@ -91,9 +99,10 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     private function privateHelperFunction() {}
 }
 ',
-            ],
-            'It works when setUp and tearDown are final' => [
-                '<?php
+        ];
+
+        yield 'It works when setUp and tearDown are final' => [
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     protected final function setUp() {}
@@ -101,7 +110,7 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     final protected function tearDown() {}
 }
 ',
-                '<?php
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     public final function setUp() {}
@@ -109,9 +118,10 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     final public function tearDown() {}
 }
 ',
-            ],
-            'It works when setUp and tearDown do not have visibility defined' => [
-                '<?php
+        ];
+
+        yield 'It works when setUp and tearDown do not have visibility defined' => [
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     protected function setUp() {}
@@ -119,7 +129,7 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     protected function tearDown() {}
 }
 ',
-                '<?php
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     function setUp() {}
@@ -127,9 +137,10 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     function tearDown() {}
 }
 ',
-            ],
-            'It works when setUp and tearDown do not have visibility defined and are final' => [
-                '<?php
+        ];
+
+        yield 'It works when setUp and tearDown do not have visibility defined and are final' => [
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     final protected function setUp() {}
@@ -137,7 +148,7 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     final protected function tearDown() {}
 }
 ',
-                '<?php
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     final function setUp() {}
@@ -145,9 +156,10 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     final function tearDown() {}
 }
 ',
-            ],
-            'Functions outside a test class do not get changed' => [
-                '<?php
+        ];
+
+        yield 'Functions outside a test class do not get changed' => [
+            '<?php
 class Fixer extends OtherClass
 {
     public function hello() {}
@@ -163,9 +175,10 @@ class Fixer extends OtherClass
     private function privateHelperFunction() {}
 }
 ',
-            ],
-            'It works even when setup and teardown have improper casing' => [
-                '<?php
+        ];
+
+        yield 'It works even when setup and teardown have improper casing' => [
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     protected function sEtUp() {}
@@ -173,7 +186,7 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     protected function TeArDoWn() {}
 }
 ',
-                '<?php
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     public function sEtUp() {}
@@ -181,9 +194,10 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     public function TeArDoWn() {}
 }
 ',
-            ],
-            'It works even with messy comments' => [
-                '<?php
+        ];
+
+        yield 'It works even with messy comments' => [
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     protected /** foo */ function setUp() {}
@@ -191,7 +205,7 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     /** foo */protected function tearDown() {}
 }
 ',
-                '<?php
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     public /** foo */ function setUp() {}
@@ -199,9 +213,10 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     /** foo */public function tearDown() {}
 }
 ',
-            ],
-            'It works even with messy comments and no defined visibility' => [
-                '<?php
+        ];
+
+        yield 'It works even with messy comments and no defined visibility' => [
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     /** foo */protected function setUp() {}
@@ -209,7 +224,7 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     /** bar */protected function tearDown() {}
 }
 ',
-                '<?php
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     /** foo */function setUp() {}
@@ -217,9 +232,10 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     /** bar */function tearDown() {}
 }
 ',
-            ],
-            'Nothing changes if setUp or tearDown are private' => [
-                '<?php
+        ];
+
+        yield 'Nothing changes if setUp or tearDown are private' => [
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     private function setUp() {}
@@ -227,9 +243,10 @@ class FixerTest extends \PhpUnit\FrameWork\TestCase
     private function tearDown() {}
 }
 ',
-            ],
-            'It works when there are multiple classes in one file' => [
-                '<?php
+        ];
+
+        yield 'It works when there are multiple classes in one file' => [
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     protected function setUp() {}
@@ -244,7 +261,7 @@ class OtherTest extends \PhpUnit\FrameWork\TestCase
     protected function tearDown() {}
 }
 ',
-                '<?php
+            '<?php
 class FixerTest extends \PhpUnit\FrameWork\TestCase
 {
     public function setUp() {}
@@ -259,7 +276,39 @@ class OtherTest extends \PhpUnit\FrameWork\TestCase
     public function tearDown() {}
 }
 ',
-            ],
+        ];
+
+        yield 'It does not touch anonymous class' => [
+            '<?php
+class FooTest extends \PhpUnit\FrameWork\TestCase
+{
+    protected function setUp(): void {
+        $mock = new class {
+            public function setUp() {}
+        };
+    }
+    protected function testSomethingElse() {
+        $mock = new class implements SetupableInterface {
+            public function setUp() {}
+        };
+    }
+}
+',
+            '<?php
+class FooTest extends \PhpUnit\FrameWork\TestCase
+{
+    public function setUp(): void {
+        $mock = new class {
+            public function setUp() {}
+        };
+    }
+    protected function testSomethingElse() {
+        $mock = new class implements SetupableInterface {
+            public function setUp() {}
+        };
+    }
+}
+',
         ];
     }
 }

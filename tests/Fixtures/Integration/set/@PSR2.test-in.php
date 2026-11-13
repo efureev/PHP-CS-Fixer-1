@@ -1,12 +1,14 @@
 <?
 namespace Vendor\Package;
-use FooInterface, FooInterfaceB;
+use FooInterfaceA, FooInterfaceB;
 use BarClass as Bar;
 use OtherVendor\OtherPackage\BazClass;
-class Foo extends Bar implements FooInterface{
+class Foo extends Bar implements FooInterfaceA{
+    const SOME_CONST = 42;
+
     var $aaa = 1, $bbb = 2;
 
-    public function sampleFunction($a, $b = null)
+    public function sampleFunction($a, $arg1, $arg2, $arg3, $foo, $b = null)
     {
         if ($a === $b) {
             bar();

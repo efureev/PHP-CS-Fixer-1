@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -15,6 +17,7 @@ namespace PhpCsFixer\Tests\ConfigurationException;
 use PhpCsFixer\ConfigurationException\InvalidConfigurationException;
 use PhpCsFixer\Console\Command\FixCommandExitStatusCalculator;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @author Andreas Möller <am@localheinz.com>
@@ -22,41 +25,37 @@ use PhpCsFixer\Tests\TestCase;
  * @internal
  *
  * @covers \PhpCsFixer\ConfigurationException\InvalidConfigurationException
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(InvalidConfigurationException::class)]
 final class InvalidConfigurationExceptionTest extends TestCase
 {
-    public function testIsInvalidArgumentException()
-    {
-        $exception = new InvalidConfigurationException('I cannot do that, Dave.');
-
-        $this->assertInstanceOf(\InvalidArgumentException::class, $exception);
-    }
-
-    public function testDefaults()
+    public function testDefaults(): void
     {
         $message = 'I cannot do that, Dave.';
 
         $exception = new InvalidConfigurationException($message);
 
-        $this->assertSame($message, $exception->getMessage());
-        $this->assertSame(FixCommandExitStatusCalculator::EXIT_STATUS_FLAG_HAS_INVALID_CONFIG, $exception->getCode());
-        $this->assertNull($exception->getPrevious());
+        self::assertSame($message, $exception->getMessage());
+        self::assertSame(FixCommandExitStatusCalculator::EXIT_STATUS_FLAG_HAS_INVALID_CONFIG, $exception->getCode());
+        self::assertNull($exception->getPrevious());
     }
 
-    public function testConstructorSetsValues()
+    public function testConstructorSetsValues(): void
     {
         $message = 'I cannot do that, Dave.';
-        $code = 9000;
+        $code = 9_000;
         $previous = new \RuntimeException();
 
         $exception = new InvalidConfigurationException(
             $message,
             $code,
-            $previous
+            $previous,
         );
 
-        $this->assertSame($message, $exception->getMessage());
-        $this->assertSame($code, $exception->getCode());
-        $this->assertSame($previous, $exception->getPrevious());
+        self::assertSame($message, $exception->getMessage());
+        self::assertSame($code, $exception->getCode());
+        self::assertSame($previous, $exception->getPrevious());
     }
 }

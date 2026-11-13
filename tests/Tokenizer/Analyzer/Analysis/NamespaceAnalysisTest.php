@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,7 +16,7 @@ namespace PhpCsFixer\Tests\Tokenizer\Analyzer\Analysis;
 
 use PhpCsFixer\Tests\TestCase;
 use PhpCsFixer\Tokenizer\Analyzer\Analysis\NamespaceAnalysis;
-use PhpCsFixer\Tokenizer\Analyzer\Analysis\StartEndTokenAwareAnalysis;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @author VeeWee <toonverwerft@gmail.com>
@@ -22,48 +24,52 @@ use PhpCsFixer\Tokenizer\Analyzer\Analysis\StartEndTokenAwareAnalysis;
  * @internal
  *
  * @covers \PhpCsFixer\Tokenizer\Analyzer\Analysis\NamespaceAnalysis
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NamespaceAnalysis::class)]
 final class NamespaceAnalysisTest extends TestCase
 {
-    public function testStartEndTokenAwareAnalysis()
+    public function testFullName(): void
     {
         $analysis = new NamespaceAnalysis('Full\NamespaceName', 'NamespaceName', 1, 2, 1, 10);
-        $this->assertInstanceOf(StartEndTokenAwareAnalysis::class, $analysis);
+        self::assertSame('Full\NamespaceName', $analysis->getFullName());
     }
 
-    public function testFullName()
+    public function testShortName(): void
     {
         $analysis = new NamespaceAnalysis('Full\NamespaceName', 'NamespaceName', 1, 2, 1, 10);
-        $this->assertSame('Full\NamespaceName', $analysis->getFullName());
+        self::assertSame('NamespaceName', $analysis->getShortName());
+        self::assertFalse($analysis->isGlobalNamespace());
     }
 
-    public function testShortName()
+    public function testStartIndex(): void
     {
         $analysis = new NamespaceAnalysis('Full\NamespaceName', 'NamespaceName', 1, 2, 1, 10);
-        $this->assertSame('NamespaceName', $analysis->getShortName());
+        self::assertSame(1, $analysis->getStartIndex());
     }
 
-    public function testStartIndex()
+    public function testEndIndex(): void
     {
         $analysis = new NamespaceAnalysis('Full\NamespaceName', 'NamespaceName', 1, 2, 1, 10);
-        $this->assertSame(1, $analysis->getStartIndex());
+        self::assertSame(2, $analysis->getEndIndex());
     }
 
-    public function testEndIndex()
+    public function testScopeStartIndex(): void
     {
         $analysis = new NamespaceAnalysis('Full\NamespaceName', 'NamespaceName', 1, 2, 1, 10);
-        $this->assertSame(2, $analysis->getEndIndex());
+        self::assertSame(1, $analysis->getScopeStartIndex());
     }
 
-    public function testScopeStartIndex()
+    public function testScopeEndIndex(): void
     {
         $analysis = new NamespaceAnalysis('Full\NamespaceName', 'NamespaceName', 1, 2, 1, 10);
-        $this->assertSame(1, $analysis->getScopeStartIndex());
+        self::assertSame(10, $analysis->getScopeEndIndex());
     }
 
-    public function testScopeEndIndex()
+    public function testGlobal(): void
     {
-        $analysis = new NamespaceAnalysis('Full\NamespaceName', 'NamespaceName', 1, 2, 1, 10);
-        $this->assertSame(10, $analysis->getScopeEndIndex());
+        $analysis = new NamespaceAnalysis('', '', 1, 2, 1, 10);
+        self::assertTrue($analysis->isGlobalNamespace());
     }
 }

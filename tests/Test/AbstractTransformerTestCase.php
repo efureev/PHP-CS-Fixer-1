@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,81 +14,204 @@
 
 namespace PhpCsFixer\Tests\Test;
 
+use PhpCsFixer\Preg;
 use PhpCsFixer\Tests\TestCase;
 use PhpCsFixer\Tokenizer\CT;
+use PhpCsFixer\Tokenizer\Token;
 use PhpCsFixer\Tokenizer\Tokens;
+use PhpCsFixer\Tokenizer\TransformerInterface;
 
 /**
- * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+ * @phpstan-import-type _PhpTokenKind from Token
+ * @phpstan-import-type _PhpTokenPrototypePartial from Token
  *
  * @internal
+ *
+ * @phpstan-type _TransformerTestExpectedKindsUnderIndex array<int, _PhpTokenKind>
+ * @phpstan-type _TransformerTestObservedKinds list<_PhpTokenKind>
+ *
+ * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 abstract class AbstractTransformerTestCase extends TestCase
 {
-    protected function setUp()
+    protected ?TransformerInterface $transformer = null;
+
+    protected function setUp(): void
     {
         parent::setUp();
 
-        // @todo remove at 3.0 together with env var itself
-        if (getenv('PHP_CS_FIXER_TEST_USE_LEGACY_TOKENIZER')) {
-            Tokens::setLegacyMode(true);
-        }
+        $this->transformer = $this->createTransformer();
     }
 
-    protected function tearDown()
+    protected function tearDown(): void
     {
         parent::tearDown();
 
-        // @todo remove at 3.0
-        Tokens::setLegacyMode(false);
+        $this->transformer = null;
     }
 
-    protected function doTest($source, array $expectedTokens = [], array $observedKindsOrPrototypes = [])
+    public function testGetPriority(): void
     {
-        $tokens = Tokens::fromCode($source);
+        self::assertIsInt($this->transformer->getPriority(), $this->transformer->getName());
+    }
 
-        $this->assertSame(
+    public function testGetName(): void
+    {
+        $name = $this->transformer->getName();
+
+        self::assertMatchesRegularExpression('/^[a-z]+[a-z_]*[a-z]$/', $name);
+    }
+
+    public function testGetCustomTokens(): void
+    {
+        $name = $this->transformer->getName();
+        $customTokens = $this->transformer->getCustomTokens();
+
+        self::assertIsArray($customTokens, $name);
+
+        foreach ($customTokens as $customToken) {
+            self::assertIsInt($customToken, $name);
+        }
+    }
+
+    public function testGetRequiredPhpVersionId(): void
+    {
+        $name = $this->transformer->getName();
+        $requiredPhpVersionId = $this->transformer->getRequiredPhpVersionId();
+
+        self::assertIsInt($requiredPhpVersionId, $name);
+        self::assertGreaterThanOrEqual(5_00_00, $requiredPhpVersionId, $name);
+    }
+
+    public function testTransformersIsFinal(): void
+    {
+        $transformerRef = new \ReflectionClass($this->transformer);
+
+        self::assertTrue(
+            $transformerRef->isFinal(),
+            \sprintf('Transformer "%s" must be declared "final."', $this->transformer->getName()),
+        );
+    }
+
+    public function testTransformDoesNotChangeSimpleCode(): void
+    {
+        if (\PHP_VERSION_ID < $this->transformer->getRequiredPhpVersionId()) {
+            $this->expectNotToPerformAssertions();
+
+            return;
+        }
+
+        Tokens::clearCache();
+        $tokens = Tokens::fromCode('<?php ');
+
+        $this->transformer->process($tokens);
+
+        self::assertFalse($tokens->isChanged());
+    }
+
+    /**
+     * @param _TransformerTestExpectedKindsUnderIndex $expectedTokens
+     * @param _TransformerTestObservedKinds           $observedKindsOrPrototypes
+     */
+    protected function doTest(string $source, array $expectedTokens, array $observedKindsOrPrototypes = []): void
+    {
+        Tokens::clearCache();
+        $tokens = new TokensWithObservedTransformers();
+        $tokens->setCode($source);
+
+        $prototypes = array_map(
+            static fn ($kindOrPrototype) => \is_int($kindOrPrototype) ? [$kindOrPrototype] : $kindOrPrototype,
+            array_unique([...$observedKindsOrPrototypes, ...$expectedTokens]),
+        );
+        \assert(array_is_list($prototypes));
+
+        self::assertSame(
             \count($expectedTokens),
             $this->countTokenPrototypes(
                 $tokens,
-                array_map(
-                    static function ($kindOrPrototype) {
-                        return \is_int($kindOrPrototype) ? [$kindOrPrototype] : $kindOrPrototype;
-                    },
-                    array_unique(array_merge($observedKindsOrPrototypes, $expectedTokens))
-                )
+                $prototypes,
             ),
-            'Number of expected tokens does not match actual token count.'
+            'Number of expected tokens does not match actual token count.',
         );
+
+        $transformerName = $this->transformer->getName();
+        $customTokensOfTransformer = $this->transformer->getCustomTokens();
+
+        foreach ($customTokensOfTransformer as $customTokenOfTransformer) {
+            self::assertTrue(CT::has($customTokenOfTransformer), \sprintf('Unknown custom token id "%d" in "%s".', $transformerName, $customTokenOfTransformer));
+            self::assertStringStartsWith('CT::', CT::getName($customTokenOfTransformer));
+        }
+
+        $customTokensOfTransformerList = implode(', ', array_map(
+            static fn (int $ct): string => CT::getName($ct),
+            $customTokensOfTransformer,
+        ));
+
+        foreach ($tokens->observedModificationsPerTransformer as $appliedTransformerName => $modificationsOfTransformer) {
+            foreach ($modificationsOfTransformer as $modification) {
+                self::assertTrue('' === $modification || \is_int($modification));
+
+                if ('' === $modification) {
+                    // in case transformer removed the token (permanently or temporarily to replace it via slice insertion later)
+                    continue;
+                }
+
+                $customTokenName = Token::getNameForId($modification);
+
+                if ($appliedTransformerName === $transformerName) {
+                    self::assertContains(
+                        $modification,
+                        $customTokensOfTransformer,
+                        \sprintf(
+                            'Transformation into "%s" must be allowed in self-documentation of the Transformer, currently allowed custom tokens are: %s',
+                            $customTokenName,
+                            $customTokensOfTransformerList,
+                        ),
+                    );
+                } else {
+                    self::assertNotContains(
+                        $modification,
+                        $customTokensOfTransformer,
+                        \sprintf(
+                            'Transformation into "%s" must NOT be applied by other Transformer than "%s".',
+                            $customTokenName,
+                            $transformerName,
+                        ),
+                    );
+                }
+            }
+        }
 
         foreach ($expectedTokens as $index => $tokenIdOrContent) {
             if (\is_string($tokenIdOrContent)) {
-                $this->assertTrue($tokens[$index]->equals($tokenIdOrContent));
+                self::assertTrue(
+                    $tokens[$index]->equals($tokenIdOrContent),
+                    \sprintf('The token at index %d should be %s, got %s', $index, json_encode($tokenIdOrContent, \JSON_THROW_ON_ERROR), $tokens[$index]->toJson()),
+                );
 
                 continue;
             }
 
-            $this->assertSame(
+            self::assertSame(
                 CT::has($tokenIdOrContent) ? CT::getName($tokenIdOrContent) : token_name($tokenIdOrContent),
                 $tokens[$index]->getName(),
-                sprintf('Token name should be the same. Got token "%s" at index %d.', $tokens[$index]->toJson(), $index)
+                \sprintf('Token name should be the same. Got token "%s" at index %d.', $tokens[$index]->toJson(), $index),
             );
 
-            $this->assertSame(
+            self::assertSame(
                 $tokenIdOrContent,
                 $tokens[$index]->getId(),
-                sprintf('Token id should be the same. Got token "%s" at index %d.', $tokens[$index]->toJson(), $index)
+                \sprintf('Token id should be the same. Got token "%s" at index %d.', $tokens[$index]->toJson(), $index),
             );
         }
     }
 
     /**
-     * @param Tokens $tokens
-     * @param array  $prototypes
-     *
-     * @return int
+     * @param list<_PhpTokenPrototypePartial> $prototypes
      */
-    private function countTokenPrototypes(Tokens $tokens, array $prototypes)
+    private function countTokenPrototypes(Tokens $tokens, array $prototypes): int
     {
         $count = 0;
 
@@ -97,5 +222,13 @@ abstract class AbstractTransformerTestCase extends TestCase
         }
 
         return $count;
+    }
+
+    private function createTransformer(): TransformerInterface
+    {
+        $transformerClassName = Preg::replace('/^(PhpCsFixer)\\\Tests(\\\.+)Test$/', '$1$2', static::class);
+        \assert(is_a($transformerClassName, TransformerInterface::class, true));
+
+        return new $transformerClassName();
     }
 }

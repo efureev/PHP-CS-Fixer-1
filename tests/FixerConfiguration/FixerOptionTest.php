@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,42 +16,46 @@ namespace PhpCsFixer\Tests\FixerConfiguration;
 
 use PhpCsFixer\FixerConfiguration\FixerOption;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @internal
  *
  * @covers \PhpCsFixer\FixerConfiguration\FixerOption
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(FixerOption::class)]
 final class FixerOptionTest extends TestCase
 {
-    public function testGetName()
+    public function testGetName(): void
     {
         $option = new FixerOption('foo', 'Bar.');
-        $this->assertSame('foo', $option->getName());
+        self::assertSame('foo', $option->getName());
     }
 
-    public function testGetDescription()
+    public function testGetDescription(): void
     {
         $option = new FixerOption('foo', 'Bar.');
-        $this->assertSame('Bar.', $option->getDescription());
+        self::assertSame('Bar.', $option->getDescription());
     }
 
-    public function testHasDefault()
+    public function testHasDefault(): void
     {
         $option = new FixerOption('foo', 'Bar.');
-        $this->assertFalse($option->hasDefault());
+        self::assertFalse($option->hasDefault());
 
         $option = new FixerOption('foo', 'Bar.', false, 'baz');
-        $this->assertTrue($option->hasDefault());
+        self::assertTrue($option->hasDefault());
     }
 
-    public function testGetDefault()
+    public function testGetDefault(): void
     {
         $option = new FixerOption('foo', 'Bar.', false, 'baz');
-        $this->assertSame('baz', $option->getDefault());
+        self::assertSame('baz', $option->getDefault());
     }
 
-    public function testGetUndefinedDefault()
+    public function testGetUndefinedDefault(): void
     {
         $option = new FixerOption('foo', 'Bar.');
 
@@ -58,47 +64,47 @@ final class FixerOptionTest extends TestCase
         $option->getDefault();
     }
 
-    public function testGetAllowedTypes()
+    public function testGetAllowedTypes(): void
     {
         $option = new FixerOption('foo', 'Bar.');
-        $this->assertNull($option->getAllowedTypes());
+        self::assertNull($option->getAllowedTypes());
 
         $option = new FixerOption('foo', 'Bar.', true, null, ['bool']);
-        $this->assertSame(['bool'], $option->getAllowedTypes());
+        self::assertSame(['bool'], $option->getAllowedTypes());
 
         $option = new FixerOption('foo', 'Bar.', true, null, ['bool', 'string']);
-        $this->assertSame(['bool', 'string'], $option->getAllowedTypes());
+        self::assertSame(['bool', 'string'], $option->getAllowedTypes());
     }
 
-    public function testGetAllowedValues()
+    public function testGetAllowedValues(): void
     {
         $option = new FixerOption('foo', 'Bar.');
-        $this->assertNull($option->getAllowedValues());
+        self::assertNull($option->getAllowedValues());
 
         $option = new FixerOption('foo', 'Bar.', true, null, null, ['baz']);
-        $this->assertSame(['baz'], $option->getAllowedValues());
+        self::assertSame(['baz'], $option->getAllowedValues());
 
         $option = new FixerOption('foo', 'Bar.', true, null, null, ['baz', 'qux']);
-        $this->assertSame(['baz', 'qux'], $option->getAllowedValues());
+        self::assertSame(['baz', 'qux'], $option->getAllowedValues());
 
-        $option = new FixerOption('foo', 'Bar.', true, null, null, [static function () {}]);
+        $option = new FixerOption('foo', 'Bar.', true, null, null, [static fn () => true]);
         $allowedTypes = $option->getAllowedValues();
-        $this->assertInternalType('array', $allowedTypes);
-        $this->assertCount(1, $allowedTypes);
-        $this->assertArrayHasKey(0, $allowedTypes);
-        $this->assertInstanceOf(\Closure::class, $allowedTypes[0]);
+        self::assertIsArray($allowedTypes);
+        self::assertCount(1, $allowedTypes);
+        self::assertArrayHasKey(0, $allowedTypes);
+        self::assertInstanceOf(\Closure::class, $allowedTypes[0]);
     }
 
-    public function testGetNormalizers()
+    public function testGetNormalizers(): void
     {
         $option = new FixerOption('foo', 'Bar.');
-        $this->assertNull($option->getNormalizer());
+        self::assertNull($option->getNormalizer());
 
-        $option = new FixerOption('foo', 'Bar.', true, null, null, null, static function () {});
-        $this->assertInstanceOf(\Closure::class, $option->getNormalizer());
+        $option = new FixerOption('foo', 'Bar.', true, null, null, null, static fn () => null);
+        self::assertInstanceOf(\Closure::class, $option->getNormalizer());
     }
 
-    public function testRequiredWithDefaultValue()
+    public function testRequiredWithDefaultValue(): void
     {
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('Required options cannot have a default value.');

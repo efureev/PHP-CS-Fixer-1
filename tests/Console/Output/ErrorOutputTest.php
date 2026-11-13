@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -13,31 +15,32 @@
 namespace PhpCsFixer\Tests\Console\Output;
 
 use PhpCsFixer\Console\Output\ErrorOutput;
+use PhpCsFixer\Differ\NullDiffer;
 use PhpCsFixer\Error\Error;
 use PhpCsFixer\Linter\LintingException;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Output\StreamOutput;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
  * @covers \PhpCsFixer\Console\Output\ErrorOutput
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(ErrorOutput::class)]
 final class ErrorOutputTest extends TestCase
 {
     /**
-     * @param Error  $error
-     * @param int    $verbosityLevel
-     * @param int    $lineNumber
-     * @param int    $exceptionLineNumber
-     * @param string $process
+     * @param OutputInterface::VERBOSITY_* $verbosityLevel
      *
-     * @dataProvider provideTestCases
+     * @dataProvider provideErrorOutputCases
      */
-    public function testErrorOutput(Error $error, $verbosityLevel, $lineNumber, $exceptionLineNumber, $process)
+    #[DataProvider('provideErrorOutputCases')]
+    public function testErrorOutput(Error $error, int $verbosityLevel, int $lineNumber, int $exceptionLineNumber, string $process): void
     {
         $source = $error->getSource();
 
@@ -48,16 +51,16 @@ final class ErrorOutputTest extends TestCase
 
         $displayed = $this->readFullStreamOutput($output);
 
-        $startWith = sprintf(
+        $startWith = \sprintf(
             '
 Files that were not fixed due to errors reported during %s:
    1) %s',
             $process,
-            __FILE__
+            __FILE__,
         );
 
         if ($verbosityLevel >= OutputInterface::VERBOSITY_VERY_VERBOSE) {
-            $startWith .= sprintf(
+            $startWith .= \sprintf(
                 '
 
                             '.'
@@ -67,52 +70,55 @@ Files that were not fixed due to errors reported during %s:
 ',
                 \get_class($source),
                 $source->getMessage(),
-                $source->getCode()
+                $source->getCode(),
             );
         }
 
         if ($verbosityLevel >= OutputInterface::VERBOSITY_DEBUG) {
-            $startWith .= sprintf(
+            $startWith .= \sprintf(
                 '
-      PhpCsFixer\Tests\Console\Output\ErrorOutputTest->getErrorAndLineNumber()
+      PhpCsFixer\Tests\Console\Output\ErrorOutputTest::getErrorAndLineNumber()
         in %s at line %d
-      PhpCsFixer\Tests\Console\Output\ErrorOutputTest->provideTestCases()
-      ReflectionMethod->invoke()
+      PhpCsFixer\Tests\Console\Output\ErrorOutputTest::provideErrorOutputCases()
 ',
                 __FILE__,
-                $lineNumber
+                $lineNumber,
             );
         }
 
-        $this->assertStringStartsWith($startWith, $displayed);
+        self::assertStringStartsWith($startWith, $displayed);
     }
 
-    public function provideTestCases()
+    /**
+     * @return iterable<int, array{Error, int, int, int, string}>
+     */
+    public static function provideErrorOutputCases(): iterable
     {
         $lineNumber = __LINE__;
-        list($exceptionLineNumber, $error) = $this->getErrorAndLineNumber(); // note: keep call and __LINE__ separated with one line break
+        [$exceptionLineNumber, $error] = self::getErrorAndLineNumber(); // note: keep call and __LINE__ separated with one line break
         ++$lineNumber;
 
-        return [
-            [$error, OutputInterface::VERBOSITY_NORMAL, $lineNumber, $exceptionLineNumber, 'VN'],
-            [$error, OutputInterface::VERBOSITY_VERBOSE, $lineNumber, $exceptionLineNumber, 'VV'],
-            [$error, OutputInterface::VERBOSITY_VERY_VERBOSE, $lineNumber, $exceptionLineNumber, 'VVV'],
-            [$error, OutputInterface::VERBOSITY_DEBUG, $lineNumber, $exceptionLineNumber, 'DEBUG'],
-        ];
+        yield [$error, OutputInterface::VERBOSITY_NORMAL, $lineNumber, $exceptionLineNumber, 'VN'];
+
+        yield [$error, OutputInterface::VERBOSITY_VERBOSE, $lineNumber, $exceptionLineNumber, 'VV'];
+
+        yield [$error, OutputInterface::VERBOSITY_VERY_VERBOSE, $lineNumber, $exceptionLineNumber, 'VVV'];
+
+        yield [$error, OutputInterface::VERBOSITY_DEBUG, $lineNumber, $exceptionLineNumber, 'DEBUG'];
     }
 
-    public function testLintingExceptionOutputsAppliedFixersAndDiff()
+    public function testLintingExceptionOutputsAppliedFixersAndDiff(): void
     {
         $fixerName = uniqid('braces_');
         $diffSpecificContext = uniqid('added_');
         $diff = <<<EOT
---- Original
-+++ New
-@@ @@
- same line
--deleted
-+${diffSpecificContext}
-EOT;
+            --- Original
+            +++ New
+            @@ @@
+             same line
+            -deleted
+            +{$diffSpecificContext}
+            EOT;
 
         $lintError = new Error(Error::TYPE_LINT, __FILE__, new LintingException(), [$fixerName], $diff);
 
@@ -135,51 +141,85 @@ EOT;
 
         $displayed = $this->readFullStreamOutput($output);
 
-        $this->assertContains($fixerName, $displayed);
-        $this->assertContains($diffSpecificContext, $displayed);
+        self::assertStringContainsString($fixerName, $displayed);
+        self::assertStringContainsString($diffSpecificContext, $displayed);
 
-        $this->assertContains($noDiffLintFixerName, $displayed);
+        self::assertStringContainsString($noDiffLintFixerName, $displayed);
 
-        $this->assertNotContains($invalidErrorFixerName, $displayed);
-        $this->assertNotContains($invalidDiff, $displayed);
+        self::assertStringNotContainsString($invalidErrorFixerName, $displayed);
+        self::assertStringNotContainsString($invalidDiff, $displayed);
+    }
+
+    public function testLintingExceptionOutputsAppliedFixersAndNoDiff(): void
+    {
+        $fixerName = 'TheFixer';
+        $diff = (new NullDiffer())->diff('old', 'new');
+
+        $lintError = new Error(Error::TYPE_LINT, __FILE__, new LintingException(), [$fixerName], $diff);
+
+        $output = $this->createStreamOutput(OutputInterface::VERBOSITY_VERY_VERBOSE);
+
+        $errorOutput = new ErrorOutput($output);
+        $errorOutput->listErrors('the_process', [$lintError]);
+
+        $displayed = $this->readFullStreamOutput($output);
+
+        self::assertSame(
+            \sprintf(
+                '
+Files that were not fixed due to errors reported during the_process:
+   1) %sErrorOutputTest.php
+
+                                              '.'
+        [PhpCsFixer\Linter\LintingException]  '.'
+                                              '.'
+                                              '.'
+
+      Applied fixers: TheFixer
+',
+                __DIR__.\DIRECTORY_SEPARATOR,
+            ),
+            $displayed,
+        );
     }
 
     /**
-     * @param int $verbosityLevel
-     *
-     * @return StreamOutput
+     * @param OutputInterface::VERBOSITY_* $verbosityLevel
      */
-    private function createStreamOutput($verbosityLevel)
+    private function createStreamOutput(int $verbosityLevel): StreamOutput
     {
-        $output = new StreamOutput(fopen('php://memory', 'wb', false));
+        $steam = fopen('php://memory', 'w', false);
+        \assert(\is_resource($steam));
+
+        $output = new StreamOutput($steam);
         $output->setDecorated(false);
         $output->setVerbosity($verbosityLevel);
 
         return $output;
     }
 
-    /**
-     * @param StreamOutput $output
-     *
-     * @return string
-     */
-    private function readFullStreamOutput($output)
+    private function readFullStreamOutput(StreamOutput $output): string
     {
         rewind($output->getStream());
         $displayed = stream_get_contents($output->getStream());
+        \assert(\is_string($displayed));
+
         // normalize line breaks,
         // as we output using SF `writeln` we are not sure what line ending has been used as it is
         // based on the platform/console/terminal used
-        return str_replace(PHP_EOL, "\n", $displayed);
+        return str_replace(\PHP_EOL, "\n", $displayed);
     }
 
-    private function getErrorAndLineNumber()
+    /**
+     * @return array{int, Error}
+     */
+    private static function getErrorAndLineNumber(): array
     {
         $lineNumber = __LINE__;
         $exception = new \RuntimeException(// note: keep exception constructor and __LINE__ separated with one line break
             'PHPUnit RT',
             888,
-            new \InvalidArgumentException('PHPUnit IAE')
+            new \InvalidArgumentException('PHPUnit IAE'),
         );
 
         return [$lineNumber + 1, new Error(Error::TYPE_EXCEPTION, __FILE__, $exception)];

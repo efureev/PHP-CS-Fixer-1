@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -15,6 +17,8 @@ namespace PhpCsFixer\Tests\FixerConfiguration;
 use PhpCsFixer\FixerConfiguration\AliasedFixerOption;
 use PhpCsFixer\FixerConfiguration\FixerOption;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @author ntzm
@@ -22,95 +26,101 @@ use PhpCsFixer\Tests\TestCase;
  * @internal
  *
  * @covers \PhpCsFixer\FixerConfiguration\AliasedFixerOption
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(AliasedFixerOption::class)]
 final class AliasedFixerOptionTest extends TestCase
 {
     /**
-     * @param string $name
-     *
      * @dataProvider provideGetNameCases
      */
-    public function testGetName($name)
+    #[DataProvider('provideGetNameCases')]
+    public function testGetName(string $name): void
     {
         $option = new AliasedFixerOption(new FixerOption($name, 'Bar.'), 'baz');
 
-        $this->assertSame($name, $option->getName());
-    }
-
-    public function provideGetNameCases()
-    {
-        return [
-            ['foo'],
-            ['bar'],
-        ];
+        self::assertSame($name, $option->getName());
     }
 
     /**
-     * @param string $description
-     *
+     * @return iterable<int, array{string}>
+     */
+    public static function provideGetNameCases(): iterable
+    {
+        yield ['foo'];
+
+        yield ['bar'];
+    }
+
+    /**
      * @dataProvider provideGetDescriptionCases
      */
-    public function testGetDescription($description)
+    #[DataProvider('provideGetDescriptionCases')]
+    public function testGetDescription(string $description): void
     {
         $option = new AliasedFixerOption(new FixerOption('foo', $description), 'baz');
 
-        $this->assertSame($description, $option->getDescription());
-    }
-
-    public function provideGetDescriptionCases()
-    {
-        return [
-            ['Foo.'],
-            ['Bar.'],
-        ];
+        self::assertSame($description, $option->getDescription());
     }
 
     /**
-     * @param bool               $hasDefault
-     * @param AliasedFixerOption $input
-     *
+     * @return iterable<int, array{string}>
+     */
+    public static function provideGetDescriptionCases(): iterable
+    {
+        yield ['Foo.'];
+
+        yield ['Bar.'];
+    }
+
+    /**
      * @dataProvider provideHasDefaultCases
      */
-    public function testHasDefault($hasDefault, AliasedFixerOption $input)
+    #[DataProvider('provideHasDefaultCases')]
+    public function testHasDefault(bool $hasDefault, AliasedFixerOption $input): void
     {
-        $this->assertSame($hasDefault, $input->hasDefault());
+        self::assertSame($hasDefault, $input->hasDefault());
     }
 
-    public function provideHasDefaultCases()
+    /**
+     * @return iterable<int, array{bool, AliasedFixerOption}>
+     */
+    public static function provideHasDefaultCases(): iterable
     {
-        return [
-            [
-                false,
-                new AliasedFixerOption(new FixerOption('foo', 'Bar.'), 'baz'),
-            ],
-            [
-                true,
-                new AliasedFixerOption(new FixerOption('foo', 'Bar.', false, 'baz'), 'baz'),
-            ],
+        yield [
+            false,
+            new AliasedFixerOption(new FixerOption('foo', 'Bar.'), 'baz'),
+        ];
+
+        yield [
+            true,
+            new AliasedFixerOption(new FixerOption('foo', 'Bar.', false, 'baz'), 'baz'),
         ];
     }
 
     /**
-     * @param string $default
-     *
      * @dataProvider provideGetDefaultCases
      */
-    public function testGetDefault($default)
+    #[DataProvider('provideGetDefaultCases')]
+    public function testGetDefault(string $default): void
     {
         $option = new AliasedFixerOption(new FixerOption('foo', 'Bar.', false, $default), 'baz');
 
-        $this->assertSame($default, $option->getDefault());
+        self::assertSame($default, $option->getDefault());
     }
 
-    public function provideGetDefaultCases()
+    /**
+     * @return iterable<int, array{string}>
+     */
+    public static function provideGetDefaultCases(): iterable
     {
-        return [
-            ['baz'],
-            ['foo'],
-        ];
+        yield ['baz'];
+
+        yield ['foo'];
     }
 
-    public function testGetUndefinedDefault()
+    public function testGetUndefinedDefault(): void
     {
         $option = new AliasedFixerOption(new FixerOption('foo', 'Bar.'), 'baz');
 
@@ -120,91 +130,92 @@ final class AliasedFixerOptionTest extends TestCase
     }
 
     /**
-     * @param null|array $allowedTypes
+     * @param null|list<string> $allowedTypes
      *
      * @dataProvider provideGetAllowedTypesCases
      */
-    public function testGetAllowedTypes($allowedTypes)
+    #[DataProvider('provideGetAllowedTypesCases')]
+    public function testGetAllowedTypes(?array $allowedTypes): void
     {
         $option = new AliasedFixerOption(new FixerOption('foo', 'Bar.', true, null, $allowedTypes), 'baz');
 
-        $this->assertSame($allowedTypes, $option->getAllowedTypes());
-    }
-
-    public function provideGetAllowedTypesCases()
-    {
-        return [
-            [null],
-            [['bool']],
-            [['bool', 'string']],
-        ];
+        self::assertSame($allowedTypes, $option->getAllowedTypes());
     }
 
     /**
-     * @param null|array $allowedValues
+     * @return iterable<int, array{null|list<string>}>
+     */
+    public static function provideGetAllowedTypesCases(): iterable
+    {
+        yield [null];
+
+        yield [['bool']];
+
+        yield [['bool', 'string']];
+    }
+
+    /**
+     * @param null|non-empty-list<null|(callable(mixed): bool)|scalar> $allowedValues
      *
      * @dataProvider provideGetAllowedValuesCases
      */
-    public function testGetAllowedValues($allowedValues)
+    #[DataProvider('provideGetAllowedValuesCases')]
+    public function testGetAllowedValues(?array $allowedValues): void
     {
         $option = new AliasedFixerOption(new FixerOption('foo', 'Bar.', true, null, null, $allowedValues), 'baz');
 
-        $this->assertSame($allowedValues, $option->getAllowedValues());
-    }
-
-    public function provideGetAllowedValuesCases()
-    {
-        return [
-            [null],
-            [['baz']],
-            [['baz', 'qux']],
-        ];
-    }
-
-    public function testGetAllowedValuesClosure()
-    {
-        $option = new AliasedFixerOption(new FixerOption('foo', 'Bar.', true, null, null, [function () {}]), 'baz');
-        $allowedTypes = $option->getAllowedValues();
-        $this->assertInternalType('array', $allowedTypes);
-        $this->assertCount(1, $allowedTypes);
-        $this->assertArrayHasKey(0, $allowedTypes);
-        $this->assertInstanceOf(\Closure::class, $allowedTypes[0]);
-    }
-
-    public function testGetNormalizers()
-    {
-        $option = new AliasedFixerOption(new FixerOption('foo', 'Bar.'), 'baz');
-        $this->assertNull($option->getNormalizer());
-
-        $option = new AliasedFixerOption(new FixerOption('foo', 'Bar.', true, null, null, null, function () {}), 'baz');
-        $this->assertInstanceOf(\Closure::class, $option->getNormalizer());
+        self::assertSame($allowedValues, $option->getAllowedValues());
     }
 
     /**
-     * @param string $alias
-     *
+     * @return iterable<int, array{null|non-empty-list<null|(callable(mixed): bool)|scalar>}>
+     */
+    public static function provideGetAllowedValuesCases(): iterable
+    {
+        yield [null];
+
+        yield [['baz']];
+
+        yield [['baz', 'qux']];
+    }
+
+    public function testGetAllowedValuesClosure(): void
+    {
+        $option = new AliasedFixerOption(new FixerOption('foo', 'Bar.', true, null, null, [static fn () => true]), 'baz');
+        $allowedTypes = $option->getAllowedValues();
+        self::assertIsArray($allowedTypes);
+        self::assertCount(1, $allowedTypes);
+        self::assertArrayHasKey(0, $allowedTypes);
+        self::assertInstanceOf(\Closure::class, $allowedTypes[0]);
+    }
+
+    public function testGetNormalizers(): void
+    {
+        $option = new AliasedFixerOption(new FixerOption('foo', 'Bar.'), 'baz');
+        self::assertNull($option->getNormalizer());
+
+        $option = new AliasedFixerOption(new FixerOption('foo', 'Bar.', true, null, null, null, static fn () => null), 'baz');
+        self::assertInstanceOf(\Closure::class, $option->getNormalizer());
+    }
+
+    /**
      * @dataProvider provideGetAliasCases
      */
-    public function testGetAlias($alias)
+    #[DataProvider('provideGetAliasCases')]
+    public function testGetAlias(string $alias): void
     {
         $options = new AliasedFixerOption(new FixerOption('foo', 'Bar', true, null, null, null, null), $alias);
 
-        $this->assertSame($alias, $options->getAlias());
+        self::assertSame($alias, $options->getAlias());
     }
 
-    public function provideGetAliasCases()
+    /**
+     * @return iterable<int, array{string}>
+     */
+    public static function provideGetAliasCases(): iterable
     {
-        return [
-            ['bar'],
-            ['baz'],
-        ];
-    }
+        yield ['bar'];
 
-    public function testRequiredWithDefaultValue()
-    {
-        $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('Required options cannot have a default value.');
-
-        new AliasedFixerOption(new FixerOption('foo', 'Bar.', true, false), 'baz');
+        yield ['baz'];
     }
 }

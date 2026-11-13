@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -13,8 +15,10 @@
 namespace PhpCsFixer\Tests\Tokenizer\Analyzer\Analysis;
 
 use PhpCsFixer\Tests\TestCase;
-use PhpCsFixer\Tokenizer\Analyzer\Analysis\StartEndTokenAwareAnalysis;
 use PhpCsFixer\Tokenizer\Analyzer\Analysis\TypeAnalysis;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
  * @author VeeWee <toonverwerft@gmail.com>
@@ -22,62 +26,236 @@ use PhpCsFixer\Tokenizer\Analyzer\Analysis\TypeAnalysis;
  * @internal
  *
  * @covers \PhpCsFixer\Tokenizer\Analyzer\Analysis\TypeAnalysis
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(TypeAnalysis::class)]
 final class TypeAnalysisTest extends TestCase
 {
-    public function testStartEndTokenAwareAnalysis()
+    public function testName(): void
     {
         $analysis = new TypeAnalysis('string', 1, 2);
-        $this->assertInstanceOf(StartEndTokenAwareAnalysis::class, $analysis);
+        self::assertSame('string', $analysis->getName());
+        self::assertFalse($analysis->isNullable());
+
+        $analysis = new TypeAnalysis('?\foo\bar', 1, 2);
+        self::assertSame('\foo\bar', $analysis->getName());
+        self::assertTrue($analysis->isNullable());
     }
 
-    public function testName()
+    public function testStartIndex(): void
     {
-        $analysis = new TypeAnalysis('string', 1, 2);
-        $this->assertSame('string', $analysis->getName());
+        $analysis = new TypeAnalysis('string', 10, 20);
+        self::assertSame(10, $analysis->getStartIndex());
     }
 
-    public function testStartIndex()
+    public function testEndIndex(): void
     {
-        $analysis = new TypeAnalysis('string', 1, 2);
-        $this->assertSame(1, $analysis->getStartIndex());
-    }
-
-    public function testEndIndex()
-    {
-        $analysis = new TypeAnalysis('string', 1, 2);
-        $this->assertSame(2, $analysis->getEndIndex());
+        $analysis = new TypeAnalysis('string', 1, 27);
+        self::assertSame(27, $analysis->getEndIndex());
     }
 
     /**
      * @dataProvider provideReservedCases
-     *
-     * @param mixed $type
-     * @param mixed $expected
      */
-    public function testReserved($type, $expected)
+    #[DataProvider('provideReservedCases')]
+    public function testReserved(string $type, bool $expected): void
     {
         $analysis = new TypeAnalysis($type, 1, 2);
-        $this->assertSame($expected, $analysis->isReservedType());
+        self::assertSame($expected, $analysis->isReservedType());
     }
 
-    public function provideReservedCases()
+    /**
+     * @return iterable<int, array{string, bool}>
+     */
+    public static function provideReservedCases(): iterable
     {
-        return [
-            ['array', true],
-            ['bool', true],
-            ['callable', true],
-            ['int', true],
-            ['iterable', true],
-            ['float', true],
-            ['mixed', true],
-            ['numeric', true],
-            ['object', true],
-            ['resource', true],
-            ['self', true],
-            ['string', true],
-            ['void', true],
-            ['other', false],
-        ];
+        yield ['array', true];
+
+        yield ['bool', true];
+
+        yield ['callable', true];
+
+        yield ['float', true];
+
+        yield ['int', true];
+
+        yield ['iterable', true];
+
+        yield ['list', true];
+
+        yield ['mixed', true];
+
+        yield ['never', true];
+
+        yield ['null', true];
+
+        yield ['object', true];
+
+        yield ['resource', true];
+
+        yield ['self', true];
+
+        yield ['string', true];
+
+        yield ['void', true];
+
+        yield ['VOID', true];
+
+        yield ['Void', true];
+
+        yield ['voId', true];
+
+        yield ['other', false];
+
+        yield ['OTHER', false];
+
+        yield ['numeric', false];
+    }
+
+    /**
+     * @dataProvider provideIsNullableCases
+     */
+    #[DataProvider('provideIsNullableCases')]
+    public function testIsNullable(bool $expected, string $input): void
+    {
+        $analysis = new TypeAnalysis($input, 1, 2);
+        self::assertSame($expected, $analysis->isNullable());
+    }
+
+    /**
+     * @return iterable<int, array{bool, string}>
+     */
+    public static function provideIsNullableCases(): iterable
+    {
+        yield [false, 'string'];
+
+        yield [true, '?string'];
+
+        yield [false, 'String'];
+
+        yield [true, '?String'];
+
+        yield [false, '\foo\bar'];
+
+        yield [true, '?\foo\bar'];
+    }
+
+    /**
+     * @dataProvider provideIsNullable80Cases
+     *
+     * @requires PHP >= 8.0.0
+     */
+    #[DataProvider('provideIsNullable80Cases')]
+    #[RequiresPhp('>= 8.0.0')]
+    public function testIsNullable80(bool $expected, string $input): void
+    {
+        $this->testIsNullable($expected, $input);
+    }
+
+    /**
+     * @return iterable<int, array{bool, string}>
+     */
+    public static function provideIsNullable80Cases(): iterable
+    {
+        yield [false, 'string|int'];
+
+        yield [true, 'string|null'];
+
+        yield [true, 'null|string'];
+
+        yield [true, 'string|NULL'];
+
+        yield [true, 'NULL|string'];
+
+        yield [true, 'string|int|null'];
+
+        yield [true, 'null|string|int'];
+
+        yield [true, 'string|null|int'];
+
+        yield [true, 'string|int|NULL'];
+
+        yield [true, 'NULL|string|int'];
+
+        yield [true, 'string|NULL|int'];
+
+        yield [false, 'string|\foo\bar'];
+
+        yield [true, 'string|\foo\bar|null'];
+
+        yield [true, 'null|string|\foo\bar'];
+
+        yield [true, 'string|null|\foo\bar'];
+
+        yield [true, 'string |null| int'];
+
+        yield [true, 'string| null |int'];
+
+        yield [true, 'string | null | int'];
+
+        yield [false, 'Null2|int'];
+
+        yield [false, 'string|Null2'];
+
+        yield [false, 'string |Null2'];
+
+        yield [false, 'Null2| int'];
+
+        yield [false, 'string | Null2 | int'];
+    }
+
+    /**
+     * @dataProvider provideIsNullable81Cases
+     *
+     * @requires PHP >= 8.1.0
+     */
+    #[DataProvider('provideIsNullable81Cases')]
+    #[RequiresPhp('>= 8.1.0')]
+    public function testIsNullable81(bool $expected, string $input): void
+    {
+        $this->testIsNullable($expected, $input);
+    }
+
+    /**
+     * @return iterable<int, array{bool, string}>
+     */
+    public static function provideIsNullable81Cases(): iterable
+    {
+        yield [false, '\foo\bar&\foo\baz'];
+
+        yield [false, '\foo\bar & \foo\baz'];
+
+        yield [false, '\foo\bar&Null2'];
+    }
+
+    /**
+     * @dataProvider provideIsNullable82Cases
+     *
+     * @requires PHP >= 8.2.0
+     */
+    #[DataProvider('provideIsNullable82Cases')]
+    #[RequiresPhp('>= 8.2.0')]
+    public function testIsNullable82(bool $expected, string $input): void
+    {
+        $this->testIsNullable($expected, $input);
+    }
+
+    /**
+     * @return iterable<int, array{bool, string}>
+     */
+    public static function provideIsNullable82Cases(): iterable
+    {
+        yield [true, '(\foo\bar&\foo\baz)|null'];
+
+        yield [true, '(\foo\bar&\foo\baz) | null'];
+
+        yield [false, '(\foo\bar&\foo\baz)|Null2'];
+
+        yield [true, 'null'];
+
+        yield [true, 'Null'];
+
+        yield [true, 'NULL'];
     }
 }

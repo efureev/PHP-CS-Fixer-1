@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,45 +14,78 @@
 
 namespace PhpCsFixer\Tests\Fixer\PhpTag;
 
+use PhpCsFixer\Fixer\PhpTag\BlankLineAfterOpeningTagFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
 use PhpCsFixer\WhitespacesFixerConfig;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Ceeram <ceeram@cakephp.org>
- * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\PhpTag\BlankLineAfterOpeningTagFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\PhpTag\BlankLineAfterOpeningTagFixer>
+ *
+ * @author Ceeram <ceeram@cakephp.org>
+ * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(BlankLineAfterOpeningTagFixer::class)]
 final class BlankLineAfterOpeningTagFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
+
+    echo 1;',
+            '<?php
+    echo 1;',
+        ];
+
+        yield [
+            '<?php
+
+    $b = 2;
+    echo 3;',
+            '<?php     $b = 2;
+    echo 3;',
+        ];
+
+        yield [
+            '<?php
+    '.'
+    $c = 4;
+    echo 5;',
+        ];
+
+        yield [
+            '<?php
 
 $a = function(){
                     echo 1;
                 };',
-                '<?php $a = function(){
+            '<?php $a = function(){
                     echo 1;
                 };',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
  class SomeClass
  {
@@ -58,81 +93,125 @@ $a = function(){
      const FOO = "bar";
  }
 ',
-            ],
-            [
-                '<?php $foo = true; ?>',
-            ],
-            [
-                '<?php $foo = true; ?>
+        ];
+
+        yield [
+            '<?php $foo = true; ?>',
+        ];
+
+        yield [
+            '<?php $foo = true; ?>
 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
 $foo = true;
 ?>',
-                '<?php
+            '<?php
 $foo = true;
 ?>',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
 $foo = true;
 $bar = false;
 ',
-                '<?php $foo = true;
+            '<?php $foo = true;
 $bar = false;
 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
 $foo = true;
 ?>
 Html here
 <?php $bar = false;',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 $foo = true;
 ?>
 Html here
 <?php $bar = false;
 ',
-            ],
-            [
-                '<?= $bar;
+        ];
+
+        yield [
+            '<?= $bar;
 $foo = $bar;
 ?>',
-            ],
+        ];
+
+        yield 'empty file with open tag without new line' => [
+            '<?php',
+        ];
+
+        yield 'empty file with open tag with new line' => [
+            "<?php\n",
+        ];
+
+        yield 'file with shebang' => [
+            <<<'EOD'
+                #!x
+                <?php
+
+                echo 1;
+                EOD,
+            <<<'EOD'
+                #!x
+                <?php
+                echo 1;
+                EOD,
+        ];
+
+        yield 'file starting with multi-line comment' => [
+            <<<'PHP'
+                <?php
+
+                /**
+                 * @author yes
+                 */
+                PHP,
+            <<<'PHP'
+                <?php
+                /**
+                 * @author yes
+                 */
+                PHP,
         ];
     }
 
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideMessyWhitespacesCases
+     * @dataProvider provideWithWhitespacesConfigCases
      */
-    public function testMessyWhitespaces($expected, $input = null)
+    #[DataProvider('provideWithWhitespacesConfigCases')]
+    public function testWithWhitespacesConfig(string $expected, ?string $input = null): void
     {
         $this->fixer->setWhitespacesConfig(new WhitespacesFixerConfig("\t", "\r\n"));
 
         $this->doTest($expected, $input);
     }
 
-    public function provideMessyWhitespacesCases()
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideWithWhitespacesConfigCases(): iterable
     {
-        return [
-            [
-                "<?php\r\n\r\n\$foo = true;\r\n",
-                "<?php \$foo = true;\r\n",
-            ],
-            [
-                "<?php\r\n\r\n\$foo = true;\r\n",
-                "<?php\r\n\$foo = true;\r\n",
-            ],
+        yield [
+            "<?php\r\n\r\n\$foo = true;\r\n",
+            "<?php \$foo = true;\r\n",
+        ];
+
+        yield [
+            "<?php\r\n\r\n\$foo = true;\r\n",
+            "<?php\r\n\$foo = true;\r\n",
         ];
     }
 }

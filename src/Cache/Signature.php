@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,71 +14,108 @@
 
 namespace PhpCsFixer\Cache;
 
+use PhpCsFixer\Future;
+
 /**
  * @author Andreas Möller <am@localheinz.com>
  *
+ * @readonly
+ *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class Signature implements SignatureInterface
 {
-    /**
-     * @var string
-     */
-    private $phpVersion;
+    private string $phpVersion;
+
+    private string $fixerVersion;
+
+    private string $indent;
+
+    private string $lineEnding;
 
     /**
-     * @var string
+     * @var array<string, array<string, mixed>|bool>
      */
-    private $fixerVersion;
+    private array $rules;
+
+    private string $ruleCustomisationPolicyVersion;
 
     /**
-     * @var array
+     * @param array<string, array<string, mixed>|bool> $rules
      */
-    private $rules;
-
-    /**
-     * @param string $phpVersion
-     * @param string $fixerVersion
-     * @param array  $rules
-     */
-    public function __construct($phpVersion, $fixerVersion, array $rules)
+    public function __construct(string $phpVersion, string $fixerVersion, string $indent, string $lineEnding, array $rules, string $ruleCustomisationPolicyVersion)
     {
         $this->phpVersion = $phpVersion;
         $this->fixerVersion = $fixerVersion;
-        $this->rules = self::utf8Encode($rules);
+        $this->indent = $indent;
+        $this->lineEnding = $lineEnding;
+        $this->rules = self::makeJsonEncodable($rules);
+        $this->ruleCustomisationPolicyVersion = $ruleCustomisationPolicyVersion;
     }
 
-    public function getPhpVersion()
+    public function getPhpVersion(): string
     {
         return $this->phpVersion;
     }
 
-    public function getFixerVersion()
+    public function getFixerVersion(): string
     {
         return $this->fixerVersion;
     }
 
-    public function getRules()
+    public function getIndent(): string
+    {
+        return $this->indent;
+    }
+
+    public function getLineEnding(): string
+    {
+        return $this->lineEnding;
+    }
+
+    public function getRules(): array
     {
         return $this->rules;
     }
 
-    public function equals(SignatureInterface $signature)
+    public function getRuleCustomisationPolicyVersion(): string
+    {
+        return $this->ruleCustomisationPolicyVersion;
+    }
+
+    public function equals(SignatureInterface $signature): bool
     {
         return $this->phpVersion === $signature->getPhpVersion()
             && $this->fixerVersion === $signature->getFixerVersion()
-            && $this->rules === $signature->getRules();
+            && $this->indent === $signature->getIndent()
+            && $this->lineEnding === $signature->getLineEnding()
+            && $this->rules === $signature->getRules()
+            && $this->ruleCustomisationPolicyVersion === $signature->getRuleCustomisationPolicyVersion();
     }
 
-    private static function utf8Encode(array $data)
+    /**
+     * @param array<string, array<string, mixed>|bool> $data
+     *
+     * @return array<string, array<string, mixed>|bool>
+     */
+    private static function makeJsonEncodable(array $data): array
     {
-        if (!\function_exists('mb_detect_encoding')) {
-            return $data;
-        }
-
-        array_walk_recursive($data, static function (&$item) {
-            if (\is_string($item) && !mb_detect_encoding($item, 'utf-8', true)) {
-                $item = utf8_encode($item);
+        array_walk_recursive($data, static function (&$item, $key): void {
+            if (\is_string($item) && false === mb_detect_encoding($item, 'utf-8', true)) {
+                $item = base64_encode($item);
+            } elseif (\is_object($item)) {
+                if ($item instanceof \JsonSerializable) {
+                    $item = \get_class($item).'#'.json_encode($item, \JSON_THROW_ON_ERROR);
+                } else {
+                    Future::triggerDeprecation(new \InvalidArgumentException(\sprintf(
+                        'Can not serialize cache signature, unhandled object under "%s" key: "%s" - implement "%s".',
+                        $key,
+                        \get_class($item),
+                        \JsonSerializable::class,
+                    )));
+                }
             }
         });
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,63 +14,106 @@
 
 namespace PhpCsFixer\Tests\Fixer\Comment;
 
+use PhpCsFixer\Fixer\Comment\NoTrailingWhitespaceInCommentFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Comment\NoTrailingWhitespaceInCommentFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Comment\NoTrailingWhitespaceInCommentFixer>
+ *
+ * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NoTrailingWhitespaceInCommentFixer::class)]
 final class NoTrailingWhitespaceInCommentFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
+        /*
+                //
+                //
+
+                //
+                //
+                //
+
+                //
+                //
+
+                //
+        */
+                ',
+            '<?php
+        /*
+                //
+                //
+                '.'
+                //
+                //
+                //
+                '.'
+                //
+                //
+                '.'
+                //
+        */
+                ',
+        ];
+
+        yield [
+            '<?php
     // This is'.'
     //'.'
     //'.'
     // multiline comment.
     //',
-                '<?php
+            '<?php
     // This is '.'
     // '.'
     //    '.'
     // multiline comment. '.'
     // ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     /*
      * This is another'.'
      *'.'
      *'.'
      * multiline comment.'.'
      */',
-                '<?php
+            '<?php
     /* '.'
      * This is another '.'
      * '.'
      * '.'
      * multiline comment. '.'
      */',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     /**
      * Summary'.'
      *'.'
@@ -78,7 +123,7 @@ final class NoTrailingWhitespaceInCommentFixerTest extends AbstractFixerTestCase
      * @annotation
      *  Foo
      */',
-                '<?php
+            '<?php
     /** '.'
      * Summary '.'
      * '.'
@@ -88,7 +133,52 @@ final class NoTrailingWhitespaceInCommentFixerTest extends AbstractFixerTestCase
      * @annotation '.'
      *  Foo '.'
      */',
-            ],
+        ];
+
+        yield [
+            str_replace(
+                "\n",
+                "\r\n",
+                '<?php
+    /**
+     * Summary
+     *'.'
+     * Description
+    */',
+            ),
+            str_replace(
+                "\n",
+                "\r\n",
+                '<?php
+    /**
+     * Summary
+     * '.'
+     * Description
+    */',
+            ),
+        ];
+
+        yield [
+            str_replace(
+                "\n",
+                "\r",
+                '<?php
+    /**
+     * Summary
+     *'.'
+     * Description
+    */',
+            ),
+            str_replace(
+                "\n",
+                "\r",
+                '<?php
+    /**
+     * Summary
+     * '.'
+     * Description
+    */',
+            ),
         ];
     }
 }

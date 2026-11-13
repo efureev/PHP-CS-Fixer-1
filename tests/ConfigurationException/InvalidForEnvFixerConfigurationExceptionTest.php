@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -15,30 +17,31 @@ namespace PhpCsFixer\Tests\ConfigurationException;
 use PhpCsFixer\ConfigurationException\InvalidForEnvFixerConfigurationException;
 use PhpCsFixer\Console\Command\FixCommandExitStatusCalculator;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
  * @covers \PhpCsFixer\ConfigurationException\InvalidForEnvFixerConfigurationException
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(InvalidForEnvFixerConfigurationException::class)]
 final class InvalidForEnvFixerConfigurationExceptionTest extends TestCase
 {
-    public function testDefaults()
+    public function testDefaults(): void
     {
         $fixerName = 'hal';
         $message = 'I cannot do that, Andreas!';
 
         $exception = new InvalidForEnvFixerConfigurationException(
             $fixerName,
-            $message
+            $message,
         );
 
-        $this->assertInstanceOf(\PhpCsFixer\ConfigurationException\InvalidFixerConfigurationException::class, $exception);
-        $this->assertSame(sprintf('[%s] %s', $fixerName, $message), $exception->getMessage());
-        $this->assertSame(FixCommandExitStatusCalculator::EXIT_STATUS_FLAG_HAS_INVALID_FIXER_CONFIG, $exception->getCode());
-        $this->assertSame($fixerName, $exception->getFixerName());
-        $this->assertNull($exception->getPrevious());
+        self::assertSame(\sprintf('[%s] %s', $fixerName, $message), $exception->getMessage());
+        self::assertSame(FixCommandExitStatusCalculator::EXIT_STATUS_FLAG_HAS_INVALID_FIXER_CONFIG, $exception->getCode());
+        self::assertSame($fixerName, $exception->getFixerName());
+        self::assertNull($exception->getPrevious());
     }
 }

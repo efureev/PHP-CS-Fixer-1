@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -13,20 +15,42 @@
 namespace PhpCsFixer\Tests;
 
 use PhpCsFixer\Finder;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Symfony\Component\Finder\SplFileInfo;
 
 /**
  * @internal
  *
  * @covers \PhpCsFixer\Finder
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(Finder::class)]
 final class FinderTest extends TestCase
 {
-    public function testThatDefaultFinderDoesNotSpecifyAnyDirectory()
+    public function testThatDefaultFinderDoesNotSpecifyAnyDirectory(): void
     {
         $this->expectException(\LogicException::class);
-        $this->expectExceptionMessageRegExp('/^You must call (?:the in\(\) method)|(?:one of in\(\) or append\(\)) methods before iterating over a Finder\.$/');
+        $this->expectExceptionMessageMatches('/^You must call (?:the in\(\) method)|(?:one of in\(\) or append\(\)) methods before iterating over a Finder\.$/');
 
         $finder = Finder::create();
         $finder->getIterator();
+    }
+
+    public function testThatFinderFindsDotFilesWhenConfigured(): void
+    {
+        $finder = Finder::create()
+            ->in(__DIR__.'/..')
+            ->depth(0)
+            ->ignoreDotFiles(false)
+        ;
+
+        self::assertContains(
+            realpath(__DIR__.'/../.php-cs-fixer.dist.php'),
+            array_map(
+                static fn (SplFileInfo $file): string => $file->getRealPath(),
+                iterator_to_array($finder->getIterator()),
+            ),
+        );
     }
 }

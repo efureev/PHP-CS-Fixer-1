@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,31 +14,50 @@
 
 namespace PhpCsFixer\Tests\Fixer\ControlStructure;
 
+use PhpCsFixer\AbstractNoUselessElseFixer;
+use PhpCsFixer\Fixer\ControlStructure\NoSuperfluousElseifFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
  * @internal
  *
+ * @covers \PhpCsFixer\AbstractNoUselessElseFixer
  * @covers \PhpCsFixer\Fixer\ControlStructure\NoSuperfluousElseifFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\ControlStructure\NoSuperfluousElseifFixer>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(AbstractNoUselessElseFixer::class)]
+#[CoversClass(NoSuperfluousElseifFixer::class)]
 final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
+if ($some) { return 1; } if ($a == 6){ $test = false; } //',
+            '<?php
+if ($some) { return 1; } elseif ($a == 6){ $test = false; } //',
+        ];
+
+        yield [
+            '<?php
 
                 if ($foo) {
                     return 1;
@@ -49,7 +70,7 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                 } else {
                     return 4;
                 }',
-                '<?php
+            '<?php
 
                 if ($foo) {
                     return 1;
@@ -60,9 +81,10 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                 } else {
                     return 4;
                 }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
                 if ($foo)
                     return 1;
@@ -71,7 +93,7 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                 else {
                     return 3;
                 }',
-                '<?php
+            '<?php
 
                 if ($foo)
                     return 1;
@@ -80,9 +102,10 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                 else {
                     return 3;
                 }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
                 if ($foo)
                     ?><?php
@@ -91,9 +114,10 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                 else {
                     ?><?php
                 }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
                 if ($foo) {
                     ?><?php
@@ -104,7 +128,7 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                 else {
                     ?><?php
                 }',
-                '<?php
+            '<?php
 
                 if ($foo) {
                     ?><?php
@@ -114,9 +138,10 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                 else {
                     ?><?php
                 }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
                 while (1) {
                     if (2) {
@@ -131,6 +156,9 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                             }
                             '.'
                             continue;
+
+
+
                         }
                         if (6) {
                             return null;
@@ -146,7 +174,7 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                         die(\'foo\');
                     }
                 }',
-                '<?php
+            '<?php
 
                 while (1) {
                     if (2) {
@@ -160,6 +188,9 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                             }
                             '.'
                             continue;
+
+
+
                         } else if (6) {
                             return null;
                         } else {
@@ -173,9 +204,10 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                         die(\'foo\');
                     }
                 }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
                 if ($a === false)
                 {
@@ -187,9 +219,10 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                     $ret .= $value;
 
                 return $ret;',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
                 if ($a)
                     echo 1;
@@ -198,9 +231,10 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                 else {
                     echo 2;
                 }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
                 if ($a) {
                     echo 1;
@@ -209,9 +243,10 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                 else {
                     echo 2;
                 }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
                 if ($a) {
                     echo 1;
@@ -220,7 +255,61 @@ final class NoSuperfluousElseifFixerTest extends AbstractFixerTestCase
                 } else {
                     echo 2;
                 }',
-            ],
+        ];
+
+        yield [
+            '<?php
+
+                if ($foo) {
+                    return 1;
+                }
+                if ($bar) {
+                    return 2;
+                }
+                if ($baz) {
+                    throw new class extends Exception{};
+                } else {
+                    return 4;
+                }',
+            '<?php
+
+                if ($foo) {
+                    return 1;
+                } elseif ($bar) {
+                    return 2;
+                } else if ($baz) {
+                    throw new class extends Exception{};
+                } else {
+                    return 4;
+                }',
+        ];
+    }
+
+    /**
+     * @dataProvider provideFix80Cases
+     *
+     * @requires PHP >= 8.0.0
+     */
+    #[DataProvider('provideFix80Cases')]
+    #[RequiresPhp('>= 8.0.0')]
+    public function testFix80(string $expected): void
+    {
+        $this->doTest($expected);
+    }
+
+    /**
+     * @return iterable<int, array{string}>
+     */
+    public static function provideFix80Cases(): iterable
+    {
+        yield [
+            '<?php
+            if ($foo) {
+                $a = $bar ?? throw new \Exception();
+            } elseif ($bar) {
+                echo 1;
+            }
+            ',
         ];
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,81 +14,102 @@
 
 namespace PhpCsFixer\Tests\Fixer\PhpUnit;
 
+use PhpCsFixer\Fixer\AbstractPhpUnitFixer;
+use PhpCsFixer\Fixer\DocBlockAnnotationTrait;
+use PhpCsFixer\Fixer\PhpUnit\PhpUnitTestClassRequiresCoversFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
 use PhpCsFixer\WhitespacesFixerConfig;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversTrait;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
- * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
- *
  * @internal
  *
+ * @covers \PhpCsFixer\Fixer\AbstractPhpUnitFixer
+ * @covers \PhpCsFixer\Fixer\DocBlockAnnotationTrait
  * @covers \PhpCsFixer\Fixer\PhpUnit\PhpUnitTestClassRequiresCoversFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\PhpUnit\PhpUnitTestClassRequiresCoversFixer>
+ *
+ * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(AbstractPhpUnitFixer::class)]
+#[CoversTrait(DocBlockAnnotationTrait::class)]
+#[CoversClass(PhpUnitTestClassRequiresCoversFixer::class)]
 final class PhpUnitTestClassRequiresCoversFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            'already with annotation: @covers' => [
-                '<?php
+        yield 'already with annotation: @covers' => [
+            '<?php
                     /**
                      * @covers Foo
                      */
                     class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-            ],
-            'already with annotation: @coversDefaultClass' => [
-                '<?php
+        ];
+
+        yield 'already with annotation: @coversDefaultClass' => [
+            '<?php
                     /**
                      * @coversDefaultClass
                      */
                     class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-            ],
-            'without docblock #1' => [
-                '<?php
+        ];
+
+        yield 'without docblock #1' => [
+            '<?php
 
                     /**
                      * @coversNothing
                      */
                     class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-                '<?php
+            '<?php
 
                     class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-            ],
-            'without docblock #2 (class is final)' => [
-                '<?php
+        ];
+
+        yield 'without docblock #2 (class is final)' => [
+            '<?php
 
                     /**
                      * @coversNothing
                      */
                     final class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-                '<?php
+            '<?php
 
                     final class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-            ],
-            'without docblock #2 (class is abstract)' => [
-                '<?php
+        ];
+
+        yield 'without docblock #2 (class is abstract)' => [
+            '<?php
                     abstract class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-            ],
-            'with docblock but annotation is missing' => [
-                '<?php
+        ];
+
+        yield 'with docblock but annotation is missing' => [
+            '<?php
 
                     /**
                      * Description.
@@ -96,7 +119,7 @@ final class PhpUnitTestClassRequiresCoversFixerTest extends AbstractFixerTestCas
                      */
                     final class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-                '<?php
+            '<?php
 
                     /**
                      * Description.
@@ -105,46 +128,58 @@ final class PhpUnitTestClassRequiresCoversFixerTest extends AbstractFixerTestCas
                      */
                     final class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-            ],
-            'with one-line docblock but annotation is missing' => [
-                '<?php
+        ];
+
+        yield 'with one-line docblock but annotation is missing' => [
+            '<?php
+
+                    /**
+                     * Description.
+                     * @coversNothing
+                     */
+                    final class FooTest extends \PHPUnit_Framework_TestCase {}
+                ',
+            '<?php
 
                     /** Description. */
                     final class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-            ],
-            'with 2-lines docblock but annotation is missing #1' => [
-                '<?php
+        ];
+
+        yield 'with 2-lines docblock but annotation is missing #1' => [
+            '<?php
 
                     /** Description.
                      * @coversNothing
                      */
                     final class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-                '<?php
+            '<?php
 
                     /** Description.
                      */
                     final class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-            ],
-            'with 2-lines docblock but annotation is missing #2' => [
-                '<?php
+        ];
+
+        yield 'with 2-lines docblock but annotation is missing #2' => [
+            '<?php
 
                     /**
                      * @coversNothing
                      * Description. */
                     final class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-                '<?php
+            '<?php
 
                     /**
                      * Description. */
                     final class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-            ],
-            'with comment instead of docblock' => [
-                '<?php
+        ];
+
+        yield 'with comment instead of docblock' => [
+            '<?php
                     /*
                      * @covers Foo
                      */
@@ -153,82 +188,98 @@ final class PhpUnitTestClassRequiresCoversFixerTest extends AbstractFixerTestCas
                      */
                     class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-                '<?php
+            '<?php
                     /*
                      * @covers Foo
                      */
                     class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-            ],
-            'not a test class' => [
-                '<?php
+        ];
+
+        yield 'not a test class' => [
+            '<?php
 
                     class Foo {}
                 ',
-            ],
-            'multiple classes in one file' => [
-                '<?php /** */
-
-                    use \PHPUnit\Framework\TestCase;
-
-                    /**
-                     * Foo
-                     * @coversNothing
-                     */
-                    class FooTest extends \PHPUnit_Framework_TestCase {}
-
-                    class Bar {}
-
-                    /**
-                     * @coversNothing
-                     */
-                    class Baz1 extends PHPUnit_Framework_TestCase {}
-
-                    /**
-                     * @coversNothing
-                     */
-                    class Baz2 extends \PHPUnit_Framework_TestCase {}
-
-                    /**
-                     * @coversNothing
-                     */
-                    class Baz3 extends \PHPUnit\Framework\TestCase {}
-
-                    /**
-                     * @coversNothing
-                     */
-                    class Baz4 extends TestCase {}
-                ',
-                '<?php /** */
-
-                    use \PHPUnit\Framework\TestCase;
-
-                    /**
-                     * Foo
-                     */
-                    class FooTest extends \PHPUnit_Framework_TestCase {}
-
-                    class Bar {}
-
-                    class Baz1 extends PHPUnit_Framework_TestCase {}
-
-                    class Baz2 extends \PHPUnit_Framework_TestCase {}
-
-                    class Baz3 extends \PHPUnit\Framework\TestCase {}
-
-                    class Baz4 extends TestCase {}
-                ',
-            ],
         ];
+
+        yield 'multiple classes in one file' => [
+            '<?php /** */
+
+                    use \PHPUnit\Framework\TestCase;
+
+                    /**
+                     * Foo
+                     * @coversNothing
+                     */
+                    class FooTest extends \PHPUnit_Framework_TestCase {}
+
+                    class Bar {}
+
+                    /**
+                     * @coversNothing
+                     */
+                    class Baz1 extends PHPUnit_Framework_TestCase {}
+
+                    /**
+                     * @coversNothing
+                     */
+                    class Baz2 extends \PHPUnit_Framework_TestCase {}
+
+                    /**
+                     * @coversNothing
+                     */
+                    class Baz3 extends \PHPUnit\Framework\TestCase {}
+
+                    /**
+                     * @coversNothing
+                     */
+                    class Baz4 extends TestCase {}
+                ',
+            '<?php /** */
+
+                    use \PHPUnit\Framework\TestCase;
+
+                    /**
+                     * Foo
+                     */
+                    class FooTest extends \PHPUnit_Framework_TestCase {}
+
+                    class Bar {}
+
+                    class Baz1 extends PHPUnit_Framework_TestCase {}
+
+                    class Baz2 extends \PHPUnit_Framework_TestCase {}
+
+                    class Baz3 extends \PHPUnit\Framework\TestCase {}
+
+                    class Baz4 extends TestCase {}
+                ',
+        ];
+
+        yield [
+            '<?php /* comment */
+
+/**
+ * @coversNothing
+ */
+class FooTest extends \PHPUnit_Framework_TestCase {}
+                ',
+            '<?php /* comment */class FooTest extends \PHPUnit_Framework_TestCase {}
+                ',
+        ];
+
+        yield [<<<'PHP'
+            <?php /* comment */
+            $test = new class extends PHPUnit_Framework_TestCase {};
+            PHP];
     }
 
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideMessyWhitespacesCases
+     * @dataProvider provideWithWhitespacesConfigCases
      */
-    public function testMessyWhitespaces($expected, $input = null)
+    #[DataProvider('provideWithWhitespacesConfigCases')]
+    public function testWithWhitespacesConfig(string $expected, ?string $input = null): void
     {
         $expected = str_replace(['    ', "\n"], ["\t", "\r\n"], $expected);
         if (null !== $input) {
@@ -240,22 +291,284 @@ final class PhpUnitTestClassRequiresCoversFixerTest extends AbstractFixerTestCas
         $this->doTest($expected, $input);
     }
 
-    public function provideMessyWhitespacesCases()
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideWithWhitespacesConfigCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
 
                     /**
                      * @coversNothing
                      */
                     class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-                '<?php
+            '<?php
 
                     class FooTest extends \PHPUnit_Framework_TestCase {}
                 ',
-            ],
+        ];
+    }
+
+    /**
+     * @dataProvider provideFix80Cases
+     *
+     * @requires PHP >= 8.0.0
+     */
+    #[DataProvider('provideFix80Cases')]
+    #[RequiresPhp('>= 8.0.0')]
+    public function testFix80(string $expected, ?string $input = null): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1?: string}>
+     */
+    public static function provideFix80Cases(): iterable
+    {
+        yield 'already with attribute CoversClass' => [
+            <<<'PHP'
+                <?php
+                #[PHPUnit\Framework\Attributes\CoversClass(Foo::class)]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'already with attribute CoversNothing' => [
+            <<<'PHP'
+                <?php
+                #[PHPUnit\Framework\Attributes\CoversNothing]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'already with attribute CoversNothing with leading slash' => [
+            <<<'PHP'
+                <?php
+                #[\PHPUnit\Framework\Attributes\CoversNothing]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'already with imported attribute' => [
+            <<<'PHP'
+                <?php
+                use PHPUnit\Framework\TestCase;
+                use PHPUnit\Framework\Attributes\CoversClass;
+                #[CoversClass(Foo::class)]
+                class FooTest extends TestCase {}
+                PHP,
+        ];
+
+        yield 'already with partially imported attribute' => [
+            <<<'PHP'
+                <?php
+                use PHPUnit\Framework\Attributes;
+                #[Attributes\CoversClass(Foo::class)]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'already with aliased attribute' => [
+            <<<'PHP'
+                <?php
+                use PHPUnit\Framework\Attributes\CoversClass as PHPUnitCoversClass;
+                #[PHPUnitCoversClass(Foo::class)]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'already with partially aliased attribute' => [
+            <<<'PHP'
+                <?php
+                use PHPUnit\Framework\Attributes as PHPUnitAttributes;
+                #[PHPUnitAttributes\CoversClass(Foo::class)]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'with attribute from different namespace' => [
+            <<<'PHP'
+                <?php
+                use Foo\CoversClass;
+                use PHPUnit\Framework\Attributes\CoversClass as PHPUnitCoversClass;
+                /**
+                 * @coversNothing
+                 */
+                #[CoversClass(Foo::class)]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+            <<<'PHP'
+                <?php
+                use Foo\CoversClass;
+                use PHPUnit\Framework\Attributes\CoversClass as PHPUnitCoversClass;
+                #[CoversClass(Foo::class)]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'with attribute on final class' => [
+            <<<'PHP'
+                <?php
+                #[PHPUnit\Framework\Attributes\CoversNothing]
+                final class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'already with attribute CoversMethod' => [
+            <<<'PHP'
+                <?php
+                #[PHPUnit\Framework\Attributes\CoversMethod(Foo::class, 'bar')]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'already with imported CoversMethod attribute' => [
+            <<<'PHP'
+                <?php
+                use PHPUnit\Framework\TestCase;
+                use PHPUnit\Framework\Attributes\CoversMethod;
+                #[CoversMethod(Foo::class, 'bar')]
+                class FooTest extends TestCase {}
+                PHP,
+        ];
+
+        yield 'already with partially imported CoversMethod attribute' => [
+            <<<'PHP'
+                <?php
+                use PHPUnit\Framework\Attributes;
+                #[Attributes\CoversMethod(Foo::class, 'bar')]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'already with aliased CoversMethod attribute' => [
+            <<<'PHP'
+                <?php
+                use PHPUnit\Framework\Attributes\CoversMethod as PHPUnitCoversMethod;
+                #[PHPUnitCoversMethod(Foo::class, 'bar')]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'already with partially aliased CoversMethod attribute' => [
+            <<<'PHP'
+                <?php
+                use PHPUnit\Framework\Attributes as PHPUnitAttributes;
+                #[PHPUnitAttributes\CoversMethod(Foo::class, 'bar')]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'already with attribute CoversFunction' => [
+            <<<'PHP'
+                <?php
+                #[PHPUnit\Framework\Attributes\CoversFunction('bar')]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'already with imported CoversFunction attribute' => [
+            <<<'PHP'
+                <?php
+                use PHPUnit\Framework\TestCase;
+                use PHPUnit\Framework\Attributes\CoversFunction;
+                #[CoversFunction('bar')]
+                class FooTest extends TestCase {}
+                PHP,
+        ];
+
+        yield 'already with partially imported CoversFunction attribute' => [
+            <<<'PHP'
+                <?php
+                use PHPUnit\Framework\Attributes;
+                #[Attributes\CoversFunction('bar')]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'already with aliased CoversFunction attribute' => [
+            <<<'PHP'
+                <?php
+                use PHPUnit\Framework\Attributes\CoversFunction as PHPUnitCoversFunction;
+                #[PHPUnitCoversFunction('bar')]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'already with partially aliased CoversFunction attribute' => [
+            <<<'PHP'
+                <?php
+                use PHPUnit\Framework\Attributes as PHPUnitAttributes;
+                #[PHPUnitAttributes\CoversFunction('bar')]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'already with attribute CoversTrait' => [
+            <<<'PHP'
+                <?php
+                use PHPUnit\Framework\Attributes\CoversTrait;
+                #[CoversTrait('Bar')]
+                class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+    }
+
+    /**
+     * @dataProvider provideFix82Cases
+     *
+     * @requires PHP >= 8.2.0
+     */
+    #[DataProvider('provideFix82Cases')]
+    #[RequiresPhp('>= 8.2.0')]
+    public function testFix82(string $expected, ?string $input = null): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1?: null|string}>
+     */
+    public static function provideFix82Cases(): iterable
+    {
+        yield 'without docblock #2 (class is final)' => [
+            '<?php
+
+                /**
+                 * @coversNothing
+                 */
+                readonly final class BarTest extends \PHPUnit_Framework_TestCase {}
+            ',
+            '<?php
+
+                readonly final class BarTest extends \PHPUnit_Framework_TestCase {}
+            ',
+        ];
+
+        yield 'without docblock #2 (class is abstract)' => [
+            '<?php
+                    abstract readonly class FooTest extends \PHPUnit_Framework_TestCase {}
+            ',
+            null,
+        ];
+
+        yield 'with attribute on readonly class' => [
+            <<<'PHP'
+                <?php
+                #[PHPUnit\Framework\Attributes\CoversNothing]
+                readonly class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
+        ];
+
+        yield 'with attribute on final readonly class' => [
+            <<<'PHP'
+                <?php
+                #[PHPUnit\Framework\Attributes\CoversNothing]
+                final readonly class FooTest extends \PHPUnit_Framework_TestCase {}
+                PHP,
         ];
     }
 }

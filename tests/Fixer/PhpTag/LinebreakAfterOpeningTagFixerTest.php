@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,98 +14,130 @@
 
 namespace PhpCsFixer\Tests\Fixer\PhpTag;
 
+use PhpCsFixer\Fixer\PhpTag\LinebreakAfterOpeningTagFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
 use PhpCsFixer\WhitespacesFixerConfig;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Ceeram <ceeram@cakephp.org>
- * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\PhpTag\LinebreakAfterOpeningTagFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\PhpTag\LinebreakAfterOpeningTagFixer>
+ *
+ * @author Ceeram <ceeram@cakephp.org>
+ * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(LinebreakAfterOpeningTagFixer::class)]
 final class LinebreakAfterOpeningTagFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
 $a = function(){
                     echo 1;
                 };',
-                '<?php $a = function(){
+            '<?php $a = function(){
                     echo 1;
                 };',
-            ],
-            [
-                '<?php $foo = true; ?>',
-            ],
-            [
-                '<?php $foo = true; ?>
+        ];
+
+        yield [
+            '<?php $foo = true; ?>',
+        ];
+
+        yield [
+            '<?php $foo = true; ?>
 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
 
 $foo = true;
 ?>',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 $foo = true;
 $bar = false;
 ?>',
-                '<?php $foo = true;
+            '<?php $foo = true;
 $bar = false;
 ?>',
-            ],
-            [
-                '<?php $foo = true; ?>
+        ];
+
+        yield [
+            '<?php $foo = true; ?>
 Html here
 <?php $bar = false; ?>',
-            ],
-            [
-                '<?= $bar;
+        ];
+
+        yield [
+            '<?= $bar;
 $foo = $bar;
 ?>',
-            ],
+        ];
+
+        yield [
+            str_replace("\n", "\r\n", '<?php
+// linebreak already present in file with Windows line endings
+'),
+        ];
+
+        yield 'file with shebang' => [
+            <<<'EOD'
+                #!x
+                <?php
+                echo 1;
+                echo 2;
+                EOD,
+            <<<'EOD'
+                #!x
+                <?php echo 1;
+                echo 2;
+                EOD,
         ];
     }
 
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideMessyWhitespacesCases
+     * @dataProvider provideWithWhitespacesConfigCases
      */
-    public function testMessyWhitespaces($expected, $input = null)
+    #[DataProvider('provideWithWhitespacesConfigCases')]
+    public function testWithWhitespacesConfig(string $expected, ?string $input = null): void
     {
         $this->fixer->setWhitespacesConfig(new WhitespacesFixerConfig("\t", "\r\n"));
 
         $this->doTest($expected, $input);
     }
 
-    public function provideMessyWhitespacesCases()
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideWithWhitespacesConfigCases(): iterable
     {
-        return [
-            [
-                "<?php\r\n\$foo = true;\n",
-                "<?php \$foo = true;\n",
-            ],
+        yield [
+            "<?php\r\n\$foo = true;\n",
+            "<?php \$foo = true;\n",
         ];
     }
 }

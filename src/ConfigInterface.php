@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -17,51 +19,53 @@ use PhpCsFixer\Fixer\FixerInterface;
 /**
  * @author Fabien Potencier <fabien@symfony.com>
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+ *
+ * @TODO v4 convert return type here and in Config class from :self to :static, keep the $this phpdoc
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 interface ConfigInterface
 {
+    /** @internal */
+    public const PHP_VERSION_SYNTAX_SUPPORTED = '8.5';
+
     /**
      * Returns the path to the cache file.
      *
-     * @return null|string Returns null if not using cache
+     * @return null|non-empty-string Returns null if not using cache
      */
-    public function getCacheFile();
+    public function getCacheFile(): ?string;
 
     /**
      * Returns the custom fixers to use.
      *
-     * @return FixerInterface[]
+     * @return list<FixerInterface>
      */
-    public function getCustomFixers();
+    public function getCustomFixers(): array;
 
     /**
      * Returns files to scan.
      *
-     * @return iterable|\Traversable
+     * @return iterable<\SplFileInfo>
      */
-    public function getFinder();
+    public function getFinder(): iterable;
 
-    /**
-     * @return string
-     */
-    public function getFormat();
+    public function getFormat(): string;
 
     /**
      * Returns true if progress should be hidden.
-     *
-     * @return bool
      */
-    public function getHideProgress();
+    public function getHideProgress(): bool;
 
     /**
-     * @return string
+     * @return non-empty-string
      */
-    public function getIndent();
+    public function getIndent(): string;
 
     /**
-     * @return string
+     * @return non-empty-string
      */
-    public function getLineEnding();
+    public function getLineEnding(): string;
 
     /**
      * Returns the name of the configuration.
@@ -70,108 +74,104 @@ interface ConfigInterface
      *
      * @return string The name of the configuration
      */
-    public function getName();
+    public function getName(): string;
 
     /**
      * Get configured PHP executable, if any.
      *
-     * @return null|string
+     * @deprecated
+     *
+     * @TODO 4.0 remove me
      */
-    public function getPhpExecutable();
+    public function getPhpExecutable(): ?string;
 
     /**
      * Check if it is allowed to run risky fixers.
-     *
-     * @return bool
      */
-    public function getRiskyAllowed();
+    public function getRiskyAllowed(): bool;
 
     /**
      * Get rules.
      *
      * Keys of array are names of fixers/sets, values are true/false.
      *
-     * @return array
+     * @return array<string, array<string, mixed>|bool>
      */
-    public function getRules();
+    public function getRules(): array;
 
     /**
      * Returns true if caching should be enabled.
-     *
-     * @return bool
      */
-    public function getUsingCache();
+    public function getUsingCache(): bool;
 
     /**
      * Adds a suite of custom fixers.
      *
      * Name of custom fixer should follow `VendorName/rule_name` convention.
      *
-     * @param FixerInterface[]|iterable|\Traversable $fixers
+     * @param iterable<FixerInterface> $fixers
+     *
+     * @return $this
      */
-    public function registerCustomFixers($fixers);
+    public function registerCustomFixers(iterable $fixers): self;
 
     /**
      * Sets the path to the cache file.
      *
-     * @param string $cacheFile
+     * @param non-empty-string $cacheFile
      *
-     * @return self
+     * @return $this
      */
-    public function setCacheFile($cacheFile);
+    public function setCacheFile(string $cacheFile): self;
 
     /**
-     * @param iterable|string[]|\Traversable $finder
+     * @param iterable<\SplFileInfo> $finder
      *
-     * @return self
+     * @return $this
      */
-    public function setFinder($finder);
+    public function setFinder(iterable $finder): self;
 
     /**
-     * @param string $format
-     *
-     * @return self
+     * @return $this
      */
-    public function setFormat($format);
+    public function setFormat(string $format): self;
 
     /**
-     * @param bool $hideProgress
-     *
-     * @return self
+     * @return $this
      */
-    public function setHideProgress($hideProgress);
+    public function setHideProgress(bool $hideProgress): self;
 
     /**
-     * @param string $indent
+     * @param non-empty-string $indent
      *
-     * @return self
+     * @return $this
      */
-    public function setIndent($indent);
+    public function setIndent(string $indent): self;
 
     /**
-     * @param string $lineEnding
+     * @param non-empty-string $lineEnding
      *
-     * @return self
+     * @return $this
      */
-    public function setLineEnding($lineEnding);
+    public function setLineEnding(string $lineEnding): self;
 
     /**
      * Set PHP executable.
      *
-     * @param null|string $phpExecutable
+     * @deprecated
      *
-     * @return self
+     * @TODO 4.0 remove me
+     *
+     * @return $this
      */
-    public function setPhpExecutable($phpExecutable);
+    public function setPhpExecutable(?string $phpExecutable): self;
 
     /**
      * Set if it is allowed to run risky fixers.
      *
-     * @param bool $isRiskyAllowed
-     *
-     * @return self
+     * @return $this
      */
-    public function setRiskyAllowed($isRiskyAllowed);
+    public function setRiskyAllowed(bool $isRiskyAllowed): self;
 
     /**
      * Set rules.
@@ -181,16 +181,14 @@ interface ConfigInterface
      * Value for fixer may be bool (turn it on or off) or array of configuration
      * (turn it on and contains configuration for FixerInterface::configure method).
      *
-     * @param array $rules
+     * @param array<string, array<string, mixed>|bool> $rules
      *
-     * @return self
+     * @return $this
      */
-    public function setRules(array $rules);
+    public function setRules(array $rules): self;
 
     /**
-     * @param bool $usingCache
-     *
-     * @return self
+     * @return $this
      */
-    public function setUsingCache($usingCache);
+    public function setUsingCache(bool $usingCache): self;
 }

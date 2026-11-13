@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,34 +14,43 @@
 
 namespace PhpCsFixer\Tests\Fixer\Whitespace;
 
+use PhpCsFixer\Fixer\Whitespace\MethodChainingIndentationFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
 use PhpCsFixer\WhitespacesFixerConfig;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
- * @author Vladimir Boliev <voff.web@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Whitespace\MethodChainingIndentationFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Whitespace\MethodChainingIndentationFixer>
+ *
+ * @author Vladimir Boliev <voff.web@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(MethodChainingIndentationFixer::class)]
 final class MethodChainingIndentationFixerTest extends AbstractFixerTestCase
 {
     /**
      * @dataProvider provideFixCases
-     *
-     * @param string      $expected
-     * @param null|string $input
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
 
     $user->setEmail(\'voff.web@gmail.com\')
         ->setPassword(\'233434\')
@@ -48,7 +59,7 @@ final class MethodChainingIndentationFixerTest extends AbstractFixerTestCase
         ->setHashsalt(\'1234\')
         ->setTncAccepted(true);
 ',
-                '<?php
+            '<?php
 
     $user->setEmail(\'voff.web@gmail.com\')
 
@@ -59,9 +70,10 @@ final class MethodChainingIndentationFixerTest extends AbstractFixerTestCase
                 ->setHashsalt(\'1234\')
   ->setTncAccepted(true);
 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 $foo
     ->bar1() // comment
     ->bar2() /*
@@ -75,7 +87,7 @@ comment
     ->bar6()
                                 /** buahaha */
     ->bar7();',
-                '<?php
+            '<?php
 $foo
          ->bar1() // comment
       ->bar2() /*
@@ -87,31 +99,35 @@ comment
 ->bar5()
                                 /** buahaha */    ->bar6()
                                 /** buahaha */->bar7();',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 $foo
     ->bar1()
     ->bar2();',
-                '<?php
+            '<?php
 $foo
 ->bar1()
 ->bar2();',
-            ],
-            [
-                '<?php $foo
+        ];
+
+        yield [
+            '<?php $foo
     ->bar();',
-                '<?php $foo
+            '<?php $foo
 ->bar();',
-            ],
-            [
-                '<?php $foo->bar()->baz()
+        ];
+
+        yield [
+            '<?php $foo->bar()->baz()
     ->qux();',
-                '<?php $foo->bar()->baz()
+            '<?php $foo->bar()->baz()
 ->qux();',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 someCodeHereAndMultipleBreaks();
 
 
@@ -119,9 +135,10 @@ someCodeHereAndMultipleBreaks();
 $foo
     ->bar1()
     ->bar2();',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
         if (null !== $files) {
             return $files;
         }
@@ -129,15 +146,17 @@ $foo
         $finder = Finder::create()
             ->files()
         ;',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
         $finder = Finder::create()
             ->files()
         ;',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
         $replacements = $replacements
             ->setAllowedTypes([\'array\'])
             ->setNormalizer(function (Options $options, $value) use ($toTypes, $default) {
@@ -148,18 +167,20 @@ $foo
                 new WhitespacesFixerConfig($config[\'indent\'], $config[\'lineEnding\'])
             )
             ;',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
         return foo()
             ->bar (
                 new foo()
             )
             ->bar();
             ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
         return new Foo("param", [
             (new Bar("param1", "param2"))
                 ->Foo([
@@ -167,9 +188,10 @@ $foo
                 ])
             ]);
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 (new Foo(
     \'argument on line 1\',
     \'argument on line 2\'
@@ -177,7 +199,7 @@ $foo
     ->foo()
     ->bar()
 ;',
-                '<?php
+            '<?php
 (new Foo(
     \'argument on line 1\',
     \'argument on line 2\'
@@ -185,9 +207,10 @@ $foo
   ->foo()
 ->bar()
 ;',
-            ],
-            [
-                '<div>
+        ];
+
+        yield [
+            '<div>
     <?php $object
         ->method()
         ->method();
@@ -198,7 +221,7 @@ $foo
     ->method()
     ->method();
 ?>',
-                '<div>
+            '<div>
     <?php $object
         ->method()
     ->method();
@@ -209,21 +232,22 @@ $foo
     ->method()
         ->method();
 ?>',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
     $user->setFoo(1)
         ->setBar([
-                1 => 1,
-                ])
+            1 => 1,
+            ])
         ->setBaz(true)
         ->setX(array(
-    2 => 2,
-))
+            2 => 2,
+        ))
         ->setY();
 ',
-                '<?php
+            '<?php
 
     $user->setFoo(1)
             ->setBar([
@@ -235,29 +259,296 @@ $foo
 ))
                     ->setY();
 ',
-            ],
+        ];
+
+        yield [
+            '<?php
+
+    $user->setEmail("voff.web@gmail.com", )
+        ->setPassword("233434" ,)
+        ->setEmailConfirmed(false , )
+        ->setEmailConfirmationCode("123456",    );
+',
+            '<?php
+
+    $user->setEmail("voff.web@gmail.com", )
+
+     ->setPassword("233434" ,)
+        ->setEmailConfirmed(false , )
+->setEmailConfirmationCode("123456",    );
+',
+        ];
+
+        yield [
+            '<?php
+
+                $obj = (new Foo)
+                    ->setBar((new Bar)
+                        ->baz());
+',
+            '<?php
+
+                $obj = (new Foo)
+        ->setBar((new Bar)
+                            ->baz());
+',
+        ];
+
+        yield [
+            '<?php
+
+                $obj
+                    ->foo("bar", function ($baz) {
+                                    return $baz
+                                        ->on("table1", "table2");
+                                })
+                    ->where("a", "b");
+',
+            '<?php
+
+                $obj
+        ->foo("bar", function ($baz) {
+                        return $baz
+                                    ->on("table1", "table2");
+                    })
+                ->where("a", "b");
+',
+        ];
+
+        yield [
+            '<?php
+
+                $obj
+                    ->foo("baz", fn ($bar) => $bar
+                        ->baz("foobar"))
+                    ->baz();
+',
+            '<?php
+
+                $obj
+                                        ->foo("baz", fn ($bar) => $bar
+        ->baz("foobar"))
+                                ->baz();
+',
+        ];
+
+        yield [
+            '<?php
+
+                $obj
+                    ->foo("baz", fn (string $bar) => otherFunc($bar)
+                        ->baz("foobar"))
+                    ->baz();
+',
+            '<?php
+
+                $obj
+                                        ->foo("baz", fn (string $bar) => otherFunc($bar)
+                            ->baz("foobar"))
+                                ->baz();
+',
+        ];
+
+        yield [
+            '<?php
+
+                $obj
+                    ->foo("baz", fn (SomeClass $bar) => $bar
+                        ->baz("foobar"))
+                    ->baz();
+',
+            '<?php
+
+                $obj
+                                        ->foo("baz", fn (SomeClass $bar) => $bar
+        ->baz("foobar"))
+                                ->baz();
+',
+        ];
+
+        yield [
+            '<?php
+
+                $obj
+                    ->foo("baz", fn (?AnotherClass $bar) => $bar
+                        ->baz("foobar"))
+                    ->baz();
+',
+            '<?php
+
+                $obj
+                                        ->foo("baz", fn (?AnotherClass $bar) => $bar
+        ->baz("foobar"))
+                                ->baz();
+',
+        ];
+
+        yield [
+            '<?php
+
+                $obj
+        /*buahaha*/
+                    ->foo("baz", fn ($bar) => $bar
+                        ->baz/*buahaha*/("foobar"))
+                    ->/**buahaha*/baz();
+',
+            '<?php
+
+                $obj
+        /*buahaha*/                                ->foo("baz", fn ($bar) => $bar
+        ->baz/*buahaha*/("foobar"))
+                                ->/**buahaha*/baz();
+',
+        ];
+
+        yield [
+            '<?php
+
+                $obj
+                    ->      foo("baz", fn ($bar) => $bar
+                        ->baz              ("foobar"))
+                    ->       baz  ();
+',
+            '<?php
+
+                $obj
+                                        ->      foo("baz", fn ($bar) => $bar
+        ->baz              ("foobar"))
+                                ->       baz  ();
+',
+        ];
+
+        yield [
+            '<?php return $foo
+->bar;',
+        ];
+
+        yield [
+            '<?php return $foo
+->bar;
+
+    if (foo()) {
+        echo 123;
+    }
+',
+        ];
+
+        yield [
+            '<?php return $foo
+->bar?>
+
+<?php
+if (foo()) {
+    echo 123;
+}
+',
+        ];
+
+        yield [
+            '<?php return [$foo
+->bar,
+1,
+2,
+abc(),
+];
+',
+        ];
+
+        yield [
+            '<?php
+$obj
+    ->foo()
+    ->bar;
+',
+            '<?php
+$obj
+    ->foo()
+->bar;
+',
+        ];
+
+        yield [
+            '<?php
+return $obj
+    ->foo()
+    ->bar
+    ->baz();
+',
+            '<?php
+return $obj
+ ->foo()
+    ->bar
+  ->baz();
+',
+        ];
+
+        yield [
+            '<?php
+foo()
+    ->bar()
+    ->baz;
+
+        $obj
+            ->foo(\'123\', 456)
+            ->bar(\'789\')
+            ->baz;
+',
+            '<?php
+foo()
+->bar()
+->baz;
+
+        $obj
+    ->foo(\'123\', 456)
+->bar(\'789\')
+->baz;
+',
         ];
     }
 
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideWindowsWhitespacesCases
+     * @dataProvider provideWithWhitespacesConfigCases
      */
-    public function testWindowsWhitespaces($expected, $input = null)
+    #[DataProvider('provideWithWhitespacesConfigCases')]
+    public function testWithWhitespacesConfig(string $expected, ?string $input = null): void
     {
         $this->fixer->setWhitespacesConfig(new WhitespacesFixerConfig("\t", "\r\n"));
         $this->doTest($expected, $input);
     }
 
-    public function provideWindowsWhitespacesCases()
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideWithWhitespacesConfigCases(): iterable
     {
-        return [
-            [
-                "<?php\r\n\$user->setEmail('voff.web@gmail.com')\r\n\t->setPassword('233434')\r\n\t->setEmailConfirmed(false)\r\n\t->setEmailConfirmationCode('123456')\r\n\t->setHashsalt('1234')\r\n\t->setTncAccepted(true);",
-                "<?php\r\n\$user->setEmail('voff.web@gmail.com')\r\n\r\n     ->setPassword('233434')\r\n\t\t\t->setEmailConfirmed(false)\r\n\t\t      ->setEmailConfirmationCode('123456')\r\n->setHashsalt('1234')\r\n\t\t->setTncAccepted(true);",
-            ],
+        yield [
+            "<?php\r\n\$user->setEmail('voff.web@gmail.com')\r\n\t->setPassword('233434')\r\n\t->setEmailConfirmed(false)\r\n\t->setEmailConfirmationCode('123456')\r\n\t->setHashsalt('1234')\r\n\t->setTncAccepted(true);",
+            "<?php\r\n\$user->setEmail('voff.web@gmail.com')\r\n\r\n     ->setPassword('233434')\r\n\t\t\t->setEmailConfirmed(false)\r\n\t\t      ->setEmailConfirmationCode('123456')\r\n->setHashsalt('1234')\r\n\t\t->setTncAccepted(true);",
         ];
+    }
+
+    /**
+     * @requires PHP >= 8.0.0
+     */
+    #[RequiresPhp('>= 8.0.0')]
+    public function testFix80(): void
+    {
+        $this->doTest(
+            '<?php
+
+    $user?->setEmail("voff.web@gmail.com")
+        ?->setPassword("233434")
+        ?->setEmailConfirmed(false)
+        ?->setEmailConfirmationCode("123456");
+',
+            '<?php
+
+    $user?->setEmail("voff.web@gmail.com")
+
+     ?->setPassword("233434")
+        ?->setEmailConfirmed(false)
+?->setEmailConfirmationCode("123456");
+',
+        );
     }
 }

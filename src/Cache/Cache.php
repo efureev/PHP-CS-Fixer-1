@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,128 +14,162 @@
 
 namespace PhpCsFixer\Cache;
 
+use PhpCsFixer\Config\NullRuleCustomisationPolicy;
+use PhpCsFixer\Utils;
+
 /**
  * @author Andreas Möller <am@localheinz.com>
  *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class Cache implements CacheInterface
 {
-    /**
-     * @var SignatureInterface
-     */
-    private $signature;
+    private SignatureInterface $signature;
 
     /**
-     * @var array
+     * @var array<string, string>
      */
-    private $hashes = [];
+    private array $hashes = [];
 
     public function __construct(SignatureInterface $signature)
     {
         $this->signature = $signature;
     }
 
-    public function getSignature()
+    public function getSignature(): SignatureInterface
     {
         return $this->signature;
     }
 
-    public function has($file)
+    public function has(string $file): bool
     {
-        return array_key_exists($file, $this->hashes);
+        return \array_key_exists($file, $this->hashes);
     }
 
-    public function get($file)
+    public function get(string $file): ?string
     {
-        if (!$this->has($file)) {
-            return;
-        }
-
-        return $this->hashes[$file];
+        return $this->hashes[$file] ?? null;
     }
 
-    public function set($file, $hash)
+    public function set(string $file, string $hash): void
     {
-        if (!\is_int($hash)) {
-            throw new \InvalidArgumentException(sprintf(
-                'Value needs to be an integer, got "%s".',
-                \is_object($hash) ? \get_class($hash) : \gettype($hash)
-            ));
-        }
-
         $this->hashes[$file] = $hash;
     }
 
-    public function clear($file)
+    public function clear(string $file): void
     {
         unset($this->hashes[$file]);
     }
 
-    public function toJson()
+    public function toJson(): string
     {
-        $json = json_encode([
-            'php' => $this->getSignature()->getPhpVersion(),
-            'version' => $this->getSignature()->getFixerVersion(),
-            'rules' => $this->getSignature()->getRules(),
-            'hashes' => $this->hashes,
-        ]);
-
-        if (JSON_ERROR_NONE !== json_last_error()) {
-            throw new \UnexpectedValueException(sprintf(
-                'Can not encode cache signature to JSON, error: "%s". If you have non-UTF8 chars in your signature, like in license for `header_comment`, consider enabling `ext-mbstring` or install `symfony/polyfill-mbstring`.',
-                json_last_error_msg()
+        try {
+            return json_encode(
+                [
+                    'php' => $this->getSignature()->getPhpVersion(),
+                    'version' => $this->getSignature()->getFixerVersion(),
+                    'indent' => $this->getSignature()->getIndent(),
+                    'lineEnding' => $this->getSignature()->getLineEnding(),
+                    'rules' => $this->getSignature()->getRules(),
+                    'ruleCustomisationPolicyVersion' => $this->getSignature()->getRuleCustomisationPolicyVersion(),
+                    'hashes' => $this->hashes,
+                ],
+                \JSON_THROW_ON_ERROR,
+            );
+        } catch (\JsonException $e) {
+            throw new \UnexpectedValueException(\sprintf(
+                'Cannot encode cache signature to JSON, error: "%s". If you have non-UTF8 chars in your signature, like in license for `header_comment`, consider enabling `ext-mbstring` or install `symfony/polyfill-mbstring`.',
+                $e->getMessage(),
             ));
         }
-
-        return $json;
     }
 
     /**
-     * @param string $json
-     *
      * @throws \InvalidArgumentException
-     *
-     * @return Cache
      */
-    public static function fromJson($json)
+    public static function fromJson(string $json): self
     {
-        $data = json_decode($json, true);
-
-        if (null === $data && JSON_ERROR_NONE !== json_last_error()) {
-            throw new \InvalidArgumentException(sprintf(
+        try {
+            $data = json_decode($json, true, 512, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            throw new \InvalidArgumentException(\sprintf(
                 'Value needs to be a valid JSON string, got "%s", error: "%s".',
-                \is_object($json) ? \get_class($json) : \gettype($json),
-                json_last_error_msg()
+                $json,
+                $e->getMessage(),
             ));
         }
 
         $requiredKeys = [
             'php',
             'version',
+            'indent',
+            'lineEnding',
             'rules',
+            // 'ruleCustomisationPolicyVersion', // @TODO v4: require me
             'hashes',
         ];
 
         $missingKeys = array_diff_key(array_flip($requiredKeys), $data);
 
-        if (\count($missingKeys)) {
-            throw new \InvalidArgumentException(sprintf(
-                'JSON data is missing keys "%s"',
-                implode('", "', $missingKeys)
+        if (\count($missingKeys) > 0) {
+            throw new \InvalidArgumentException(\sprintf(
+                'JSON data is missing keys %s',
+                Utils::naturalLanguageJoin(array_keys($missingKeys)),
             ));
+        }
+
+        // Validate value types too, not just key presence: a syntactically-valid cache with a
+        // wrong-typed field must be treated as corrupt (rebuild) rather than crashing the process
+        // with an uncaught TypeError from the strictly-typed Signature constructor / hash mapping.
+        foreach (['php', 'version', 'indent', 'lineEnding'] as $stringKey) {
+            if (!\is_string($data[$stringKey])) {
+                throw new \InvalidArgumentException(\sprintf('JSON data key "%s" is expected to be a string.', $stringKey));
+            }
+        }
+
+        if (!\is_array($data['rules'])) {
+            throw new \InvalidArgumentException('JSON data key "rules" is expected to be an array.');
+        }
+
+        if (!\is_array($data['hashes'])) {
+            throw new \InvalidArgumentException('JSON data key "hashes" is expected to be an array.');
+        }
+
+        if (isset($data['ruleCustomisationPolicyVersion']) && !\is_string($data['ruleCustomisationPolicyVersion'])) {
+            throw new \InvalidArgumentException('JSON data key "ruleCustomisationPolicyVersion" is expected to be a string.');
         }
 
         $signature = new Signature(
             $data['php'],
             $data['version'],
-            $data['rules']
+            $data['indent'],
+            $data['lineEnding'],
+            $data['rules'],
+            $data['ruleCustomisationPolicyVersion'] ?? NullRuleCustomisationPolicy::VERSION_FOR_CACHE,
         );
 
         $cache = new self($signature);
 
-        $cache->hashes = $data['hashes'];
+        // before v3.11.1 the hashes were crc32 encoded and saved as integers
+        // @TODO v4: remove the to string cast/array_map
+        $cache->hashes = array_map(static fn ($v): string => \is_int($v) ? (string) $v : $v, $data['hashes']);
 
         return $cache;
+    }
+
+    /**
+     * @internal
+     */
+    public function backfillHashes(self $oldCache): bool
+    {
+        if (!$this->getSignature()->equals($oldCache->getSignature())) {
+            return false;
+        }
+
+        $this->hashes = array_merge($oldCache->hashes, $this->hashes);
+
+        return true;
     }
 }

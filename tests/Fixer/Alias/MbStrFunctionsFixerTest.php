@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,55 +14,164 @@
 
 namespace PhpCsFixer\Tests\Fixer\Alias;
 
+use PhpCsFixer\Fixer\Alias\MbStrFunctionsFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
- * @author Filippo Tessarotto <zoeslam@gmail.com>
- *
  * @internal
  *
- * @covers \PhpCsFixer\AbstractFunctionReferenceFixer
  * @covers \PhpCsFixer\Fixer\Alias\MbStrFunctionsFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Alias\MbStrFunctionsFixer>
+ *
+ * @author Filippo Tessarotto <zoeslam@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(MbStrFunctionsFixer::class)]
 final class MbStrFunctionsFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            ['<?php $x = "strlen";'],
-            ['<?php $x = Foo::strlen("bar");'],
-            ['<?php $x = new strlen("bar");'],
-            ['<?php $x = new \strlen("bar");'],
-            ['<?php $x = new Foo\strlen("bar");'],
-            ['<?php $x = Foo\strlen("bar");'],
-            ['<?php $x = strlen::call("bar");'],
-            ['<?php $x = $foo->strlen("bar");'],
-            ['<?php $x = strlen();'], // number of arguments mismatch
-            ['<?php $x = strlen($a, $b);'], // number of arguments mismatch
-            ['<?php $x = mb_strlen("bar");', '<?php $x = strlen("bar");'],
-            ['<?php $x = \mb_strlen("bar");', '<?php $x = \strlen("bar");'],
-            ['<?php $x = mb_strtolower(mb_strstr("bar", "a"));', '<?php $x = strtolower(strstr("bar", "a"));'],
-            ['<?php $x = mb_strtolower( \mb_strstr ("bar", "a"));', '<?php $x = strtolower( \strstr ("bar", "a"));'],
-            ['<?php $x = mb_substr("bar", 2, 1);', '<?php $x = substr("bar", 2, 1);'],
-            [
-                '<?php
+        yield ['<?php $x = "strlen";'];
+
+        yield ['<?php $x = Foo::strlen("bar");'];
+
+        yield ['<?php $x = new strlen("bar");'];
+
+        yield ['<?php $x = new \strlen("bar");'];
+
+        yield ['<?php $x = new Foo\strlen("bar");'];
+
+        yield ['<?php $x = Foo\strlen("bar");'];
+
+        yield ['<?php $x = strlen::call("bar");'];
+
+        yield ['<?php $x = $foo->strlen("bar");'];
+
+        yield ['<?php $x = strlen();']; // number of arguments mismatch
+
+        yield ['<?php $x = strlen($a, $b);']; // number of arguments mismatch
+
+        yield ['<?php $x = mb_strlen("bar");', '<?php $x = strlen("bar");'];
+
+        yield ['<?php $x = \mb_strlen("bar");', '<?php $x = \strlen("bar");'];
+
+        yield ['<?php $x = mb_strtolower(mb_strstr("bar", "a"));', '<?php $x = strtolower(strstr("bar", "a"));'];
+
+        yield ['<?php $x = mb_strtolower( \mb_strstr ("bar", "a"));', '<?php $x = strtolower( \strstr ("bar", "a"));'];
+
+        yield ['<?php $x = mb_substr("bar", 2, 1);', '<?php $x = substr("bar", 2, 1);'];
+
+        yield [
+            '<?php
                 interface Test
                 {
                     public function &strlen($a);
                     public function strtolower($a);
                 }',
-            ],
+        ];
+
+        yield [
+            '<?php $a = mb_str_split($a);',
+            '<?php $a = str_split($a);',
+        ];
+
+        yield [
+            <<<'PHP'
+                <?php
+                namespace Foo;
+                use function Bar\strlen;
+                use function mb_strtolower;
+                use function mb_strtoupper;
+                use function \mb_str_split;
+                return strlen($x) > 10 ? mb_strtolower($x) : mb_strtoupper($x);
+                PHP,
+            <<<'PHP'
+                <?php
+                namespace Foo;
+                use function Bar\strlen;
+                use function strtolower;
+                use function strtoupper;
+                use function \str_split;
+                return strlen($x) > 10 ? strtolower($x) : strtoupper($x);
+                PHP,
+        ];
+    }
+
+    /**
+     * @requires PHP >= 8.3.0
+     *
+     * @dataProvider provideFix83Cases
+     */
+    #[RequiresPhp('>= 8.3.0')]
+    #[DataProvider('provideFix83Cases')]
+    public function testFix83(string $expected, ?string $input = null): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<string, array{string, null|string}>
+     */
+    public static function provideFix83Cases(): iterable
+    {
+        yield 'mb_str_pad()' => [
+            '<?php $x = mb_str_pad("bar", 2, "0", STR_PAD_LEFT);',
+            '<?php $x = str_pad("bar", 2, "0", STR_PAD_LEFT);',
+        ];
+    }
+
+    /**
+     * @requires PHP >= 8.4.0
+     *
+     * @dataProvider provideFix84Cases
+     */
+    #[RequiresPhp('>= 8.4.0')]
+    #[DataProvider('provideFix84Cases')]
+    public function testFix84(string $expected, ?string $input = null): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<string, array{string, null|string}>
+     */
+    public static function provideFix84Cases(): iterable
+    {
+        yield 'mb_trim 1 argument' => [
+            '<?php $x = mb_trim("    foo  ");',
+            '<?php $x = trim("    foo  ");',
+        ];
+
+        yield 'mb_trim 2 arguments' => [
+            '<?php $x = mb_trim("____foo__", "_");',
+            '<?php $x = trim("____foo__", "_");',
+        ];
+
+        yield 'ltrim' => [
+            '<?php $x = mb_ltrim("    foo  ");',
+            '<?php $x = ltrim("    foo  ");',
+        ];
+
+        yield 'rtrim' => [
+            '<?php $x = mb_rtrim("    foo  ");',
+            '<?php $x = rtrim("    foo  ");',
         ];
     }
 }

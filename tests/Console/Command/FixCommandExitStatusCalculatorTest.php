@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,6 +16,8 @@ namespace PhpCsFixer\Tests\Console\Command;
 
 use PhpCsFixer\Console\Command\FixCommandExitStatusCalculator;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @author Andreas Möller <am@localheinz.com>
@@ -22,40 +26,67 @@ use PhpCsFixer\Tests\TestCase;
  * @internal
  *
  * @covers \PhpCsFixer\Console\Command\FixCommandExitStatusCalculator
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(FixCommandExitStatusCalculator::class)]
 final class FixCommandExitStatusCalculatorTest extends TestCase
 {
     /**
-     * @param int  $expected
-     * @param bool $isDryRun
-     * @param bool $hasChangedFiles
-     * @param bool $hasInvalidErrors
-     * @param bool $hasExceptionErrors
-     *
      * @dataProvider provideCalculateCases
      */
-    public function testCalculate($expected, $isDryRun, $hasChangedFiles, $hasInvalidErrors, $hasExceptionErrors)
-    {
+    #[DataProvider('provideCalculateCases')]
+    public function testCalculate(
+        int $expected,
+        bool $isDryRun,
+        bool $hasChangedFiles,
+        bool $hasInvalidErrors,
+        bool $hasExceptionErrors,
+        bool $hasLintErrorsAfterFixing
+    ): void {
         $calculator = new FixCommandExitStatusCalculator();
 
-        $this->assertSame(
+        self::assertSame(
             $expected,
-            $calculator->calculate($isDryRun, $hasChangedFiles, $hasInvalidErrors, $hasExceptionErrors)
+            $calculator->calculate(
+                $isDryRun,
+                $hasChangedFiles,
+                $hasInvalidErrors,
+                $hasExceptionErrors,
+                $hasLintErrorsAfterFixing,
+            ),
         );
     }
 
-    public function provideCalculateCases()
+    /**
+     * @return iterable<int, array{int, bool, bool, bool, bool, bool}>
+     */
+    public static function provideCalculateCases(): iterable
     {
-        return [
-            [0, true, false, false, false],
-            [0, false, false, false, false],
-            [8, true, true, false, false],
-            [0, false, true, false, false],
-            [4, true, false, true, false],
-            [0, false, false, true, false],
-            [12, true, true, true, false],
-            [0, false, true, true, false],
-            [76, true, true, true, true],
-        ];
+        yield [0, true, false, false, false, false];
+
+        yield [0, false, false, false, false, false];
+
+        yield [8, true, true, false, false, false];
+
+        yield [0, false, true, false, false, false];
+
+        yield [4, true, false, true, false, false];
+
+        yield [0, false, false, true, false, false];
+
+        yield [12, true, true, true, false, false];
+
+        yield [0, false, true, true, false, false];
+
+        yield [76, true, true, true, true, false];
+
+        yield [64, false, false, false, false, true];
+
+        yield [64, false, false, false, true, false];
+
+        yield [64, false, false, false, true, true];
+
+        yield [8 | 64, true, true, false, true, true];
     }
 }

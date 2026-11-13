@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,6 +16,7 @@ namespace PhpCsFixer\Tokenizer\Transformer;
 
 use PhpCsFixer\Tokenizer\AbstractTransformer;
 use PhpCsFixer\Tokenizer\CT;
+use PhpCsFixer\Tokenizer\FCT;
 use PhpCsFixer\Tokenizer\Token;
 use PhpCsFixer\Tokenizer\Tokens;
 
@@ -25,74 +28,88 @@ use PhpCsFixer\Tokenizer\Tokens;
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
  *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class UseTransformer extends AbstractTransformer
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function getCustomTokens()
+    private const CLASS_TYPES = [\T_TRAIT, FCT::T_ENUM];
+
+    public function getPriority(): int
+    {
+        // Should run after CurlyBraceTransformer and before TypeColonTransformer
+        return -5;
+    }
+
+    public function getRequiredPhpVersionId(): int
+    {
+        return 5_03_00;
+    }
+
+    public function isCandidate(Tokens $tokens): bool
+    {
+        return $tokens->isTokenKindFound(\T_USE);
+    }
+
+    public function process(Tokens $tokens): void
+    {
+        $count = $tokens->count();
+
+        for ($index = 0; $index < $count; ++$index) {
+            $token = $tokens[$index];
+
+            if ($token->isGivenKind(\T_USE) && $this->isUseForLambda($tokens, $index)) {
+                $tokens[$index] = new Token([CT::T_USE_LAMBDA, $token->getContent()]);
+
+                continue;
+            }
+
+            // Only search inside class/trait body for `T_USE` for traits.
+            // Cannot import traits inside interfaces or anywhere else
+
+            if ($token->isGivenKind(\T_CLASS)) {
+                if ($tokens[$tokens->getPrevMeaningfulToken($index)]->isGivenKind(\T_DOUBLE_COLON)) {
+                    continue;
+                }
+            } elseif (!$token->isGivenKind(self::CLASS_TYPES)) {
+                continue;
+            }
+
+            $openBraceIndex = $index;
+            $nextIndex = $tokens->getNextMeaningfulToken($index);
+
+            if ($tokens[$nextIndex]->equals('(')) {
+                $openBraceIndex = $tokens->findBlockEnd(Tokens::BLOCK_TYPE_PARENTHESIS, $nextIndex);
+            }
+
+            $openBraceIndex = $tokens->getNextTokenOfKind($openBraceIndex, ['{']);
+            $innerLimit = $tokens->findBlockEnd(Tokens::BLOCK_TYPE_BRACE, $openBraceIndex);
+
+            while ($index < $innerLimit) {
+                $token = $tokens[++$index];
+
+                if (!$token->isGivenKind(\T_USE)) {
+                    continue;
+                }
+
+                if ($this->isUseForLambda($tokens, $index)) {
+                    $tokens[$index] = new Token([CT::T_USE_LAMBDA, $token->getContent()]);
+                } else {
+                    $tokens[$index] = new Token([CT::T_USE_TRAIT, $token->getContent()]);
+                }
+            }
+        }
+    }
+
+    public function getCustomTokens(): array
     {
         return [CT::T_USE_TRAIT, CT::T_USE_LAMBDA];
     }
 
     /**
-     * {@inheritdoc}
-     */
-    public function getRequiredPhpVersionId()
-    {
-        return 50300;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function process(Tokens $tokens, Token $token, $index)
-    {
-        if ($token->isGivenKind(T_USE) && $this->isUseForLambda($tokens, $index)) {
-            $tokens[$index] = new Token([CT::T_USE_LAMBDA, $token->getContent()]);
-
-            return;
-        }
-
-        // Only search inside class/trait body for `T_USE` for traits.
-        // Cannot import traits inside interfaces or anywhere else
-
-        if (!$token->isGivenKind([T_CLASS, T_TRAIT])) {
-            return;
-        }
-
-        if ($tokens[$tokens->getPrevMeaningfulToken($index)]->isGivenKind(T_DOUBLE_COLON)) {
-            return;
-        }
-
-        $index = $tokens->getNextTokenOfKind($index, ['{']);
-        $innerLimit = $tokens->findBlockEnd(Tokens::BLOCK_TYPE_CURLY_BRACE, $index);
-
-        while ($index < $innerLimit) {
-            $token = $tokens[++$index];
-
-            if (!$token->isGivenKind(T_USE)) {
-                continue;
-            }
-
-            if ($this->isUseForLambda($tokens, $index)) {
-                $tokens[$index] = new Token([CT::T_USE_LAMBDA, $token->getContent()]);
-            } else {
-                $tokens[$index] = new Token([CT::T_USE_TRAIT, $token->getContent()]);
-            }
-        }
-    }
-
-    /**
      * Check if token under given index is `use` statement for lambda function.
-     *
-     * @param Tokens $tokens
-     * @param int    $index
-     *
-     * @return bool
      */
-    private function isUseForLambda(Tokens $tokens, $index)
+    private function isUseForLambda(Tokens $tokens, int $index): bool
     {
         $nextToken = $tokens[$tokens->getNextMeaningfulToken($index)];
 

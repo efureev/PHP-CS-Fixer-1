@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,120 +14,183 @@
 
 namespace PhpCsFixer\Tests\Fixer\Whitespace;
 
+use PhpCsFixer\Fixer\Whitespace\NoSpacesInsideParenthesisFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
- * @author Marc Aubé
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Whitespace\NoSpacesInsideParenthesisFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Whitespace\NoSpacesInsideParenthesisFixer>
+ *
+ * @author Marc Aubé
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NoSpacesInsideParenthesisFixer::class)]
 final class NoSpacesInsideParenthesisFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function testLeaveNewLinesAlone()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        $expected = <<<'EOF'
-<?php
+        yield [
+            '<?php foo();',
+            '<?php foo( );',
+        ];
 
-class Foo
-{
-    private function bar()
-    {
-        if (foo(
-            'foo' ,
-            'bar'    ,
-            [1, 2, 3],
-            'baz' // a comment just to mix things up
-        )) {
-            return 1;
-        };
-    }
-}
-EOF;
-        $this->doTest($expected);
-    }
-
-    public function provideFixCases()
-    {
-        return [
-            [
-                '<?php foo();',
-                '<?php foo( );',
-            ],
-            [
-                '<?php
+        yield [
+            '<?php
 if (true) {
     // if body
 }',
-                '<?php
+            '<?php
 if ( true ) {
     // if body
 }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 if (true) {
     // if body
 }',
-                '<?php
+            '<?php
 if (     true   ) {
     // if body
 }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 function foo($bar, $baz)
 {
     // function body
 }',
-                '<?php
+            '<?php
 function foo( $bar, $baz )
 {
     // function body
 }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 $foo->bar($arg1, $arg2);',
-                '<?php
+            '<?php
 $foo->bar(  $arg1, $arg2   );',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 $var = array( 1, 2, 3 );
 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 $var = [ 1, 2, 3 ];
 ',
-            ],
-            // list call with trailing comma - need to leave alone
-            [
-                '<?php list($path, $mode, ) = foo();',
-            ],
-            [
-                '<?php list($path, $mode,) = foo();',
-            ],
-            [
-                '<?php
+        ];
+
+        // list call with trailing comma - need to leave alone
+        yield [
+            '<?php list($path, $mode, ) = foo();',
+        ];
+
+        yield [
+            '<?php list($path, $mode,) = foo();',
+        ];
+
+        yield [
+            '<?php
 $a = $b->test(  // do not remove space
     $e          // between `(` and `)`
                 // and this comment
 );',
-            ],
+        ];
+    }
+
+    public function testLeaveNewLinesAlone(): void
+    {
+        $expected = <<<'EOF'
+            <?php
+
+            class Foo
+            {
+                private function bar()
+                {
+                    if (foo(
+                        'foo' ,
+                        'bar'    ,
+                        [1, 2, 3],
+                        'baz' // a comment just to mix things up
+                    )) {
+                        return 1;
+                    };
+                }
+            }
+            EOF;
+        $this->doTest($expected);
+    }
+
+    /**
+     * @dataProvider provideFix80Cases
+     *
+     * @requires PHP >= 8.0.0
+     */
+    #[DataProvider('provideFix80Cases')]
+    #[RequiresPhp('>= 8.0.0')]
+    public function testFix80(string $expected, string $input): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideFix80Cases(): iterable
+    {
+        yield [
+            '<?php function foo(mixed $a){}',
+            '<?php function foo( mixed $a ){}',
+        ];
+    }
+
+    /**
+     * @dataProvider provideFix81Cases
+     *
+     * @requires PHP >= 8.1.0
+     */
+    #[DataProvider('provideFix81Cases')]
+    #[RequiresPhp('>= 8.1.0')]
+    public function testFix81(string $expected, string $input): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function provideFix81Cases(): iterable
+    {
+        yield 'first callable class' => [
+            '<?php $a = strlen(...);',
+            '<?php $a = strlen( ... );',
         ];
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,89 +14,104 @@
 
 namespace PhpCsFixer\Tests\Fixer\ControlStructure;
 
+use PhpCsFixer\Fixer\ControlStructure\ElseifFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Leszek Prabucki <leszek.prabucki@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\ControlStructure\ElseifFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\ControlStructure\ElseifFixer>
+ *
+ * @author Leszek Prabucki <leszek.prabucki@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(ElseifFixer::class)]
 final class ElseifFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideTestFixCases
+     * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideTestFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            ['<?php if ($some) { $test = true; } else { $test = false; }'],
-            [
-                '<?php if ($some) { $test = true; } elseif ($some !== "test") { $test = false; }',
-                '<?php if ($some) { $test = true; } else if ($some !== "test") { $test = false; }',
-            ],
-            [
-                '<?php if ($some) { $test = true; } elseif ($some !== "test") { $test = false; }',
-                '<?php if ($some) { $test = true; } else  if ($some !== "test") { $test = false; }',
-            ],
-            [
-                '<?php $js = \'if (foo.a) { foo.a = "OK"; } else if (foo.b) { foo.b = "OK"; }\';',
-            ],
-            [
-                '<?php
+        yield ['<?php if ($some) { $test = true; } else { $test = false; }'];
+
+        yield [
+            '<?php if ($some) { $test = true; } elseif ($some !== "test") { $test = false; }',
+            '<?php if ($some) { $test = true; } else if ($some !== "test") { $test = false; }',
+        ];
+
+        yield [
+            '<?php if ($some) { $test = true; } elseif ($some !== "test") { $test = false; }',
+            '<?php if ($some) { $test = true; } else  if ($some !== "test") { $test = false; }',
+        ];
+
+        yield [
+            '<?php $js = \'if (foo.a) { foo.a = "OK"; } else if (foo.b) { foo.b = "OK"; }\';',
+        ];
+
+        yield [
+            '<?php
                     if ($a) {
                         $x = 1;
                     } elseif ($b) {
                         $x = 2;
                     }',
-                '<?php
+            '<?php
                     if ($a) {
                         $x = 1;
                     } else
                     if ($b) {
                         $x = 2;
                     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     if ($a) {
                     } elseif/**/ ($b) {
                     }
                 ',
-                '<?php
+            '<?php
                     if ($a) {
                     } else /**/ if ($b) {
                     }
                 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     if ($a) {
                     } elseif//
                         ($b) {
                     }
                 ',
-                '<?php
+            '<?php
                     if ($a) {
                     } else //
                         if ($b) {
                     }
                 ',
-            ],
-            [
-                '<?php if ($a) {} /**/elseif ($b){}',
-                '<?php if ($a) {} /**/else if ($b){}',
-            ],
-            ['<?php if ($x) { foo(); } else if ($y): bar(); endif;'],
         ];
+
+        yield [
+            '<?php if ($a) {} /**/elseif ($b){}',
+            '<?php if ($a) {} /**/else if ($b){}',
+        ];
+
+        yield ['<?php if ($x) { foo(); } else if ($y): bar(); endif;'];
     }
 }

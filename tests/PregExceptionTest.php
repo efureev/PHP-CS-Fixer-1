@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -13,6 +15,7 @@
 namespace PhpCsFixer\Tests;
 
 use PhpCsFixer\PregException;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @author Kuba Werłos <werlos@gmail.com>
@@ -20,13 +23,17 @@ use PhpCsFixer\PregException;
  * @internal
  *
  * @covers \PhpCsFixer\PregException
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(PregException::class)]
 final class PregExceptionTest extends TestCase
 {
-    public function testIsRuntimeException()
+    public function testPregException(): void
     {
-        $exception = new PregException();
+        $exception = new PregException('foo', 123);
 
-        $this->assertInstanceOf(\RuntimeException::class, $exception);
+        self::assertSame('foo', $exception->getMessage());
+        self::assertSame(123, $exception->getCode());
     }
 }

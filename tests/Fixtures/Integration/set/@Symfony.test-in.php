@@ -20,6 +20,9 @@ class FooBar
 {
 
 
+    /**
+     * @const int
+     */
     const SOME_CONST = 42;
 
     private $fooBar;
@@ -34,13 +37,12 @@ class FooBar
 
     /**
      * Foo
+     *
      * @param string $dummy Some argument description
      * @param array $options
      * @param string|null $data Foo
-     *
-     * @return string|null Transformed input
-     *
      * @throws \RuntimeException
+     * @return string|null Transformed input
      */
     private function transformText($dummy, array $options = array(),$data=null)
     {
@@ -65,7 +67,7 @@ class FooBar
             return ucwords($dummy);
         }
 
-        throw new \RuntimeException(sprintf('Unrecognized dummy option "%s"', $dummy));
+        throw new \RuntimeException(sprintf('Unrecognized dummy option "%s".', $dummy));
     }
     private function reverseBoolean($value = null, $theSwitch = false)
     {
@@ -112,9 +114,15 @@ implements
     }
 }
 
-final class finalClass
+final class FinalClass
 {
     final function finalMethod(){}
 }
+
+function callback($a, ...   $b) { return (--   $a) * ($b   ++);}
+
+/** @var $a int */
+$a =& $b;
+$c =  &  $d;
 
 echo 1 ?>

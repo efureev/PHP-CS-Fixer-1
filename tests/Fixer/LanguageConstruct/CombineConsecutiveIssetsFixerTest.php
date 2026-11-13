@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,77 +14,99 @@
 
 namespace PhpCsFixer\Tests\Fixer\LanguageConstruct;
 
+use PhpCsFixer\Fixer\LanguageConstruct\CombineConsecutiveIssetsFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\LanguageConstruct\CombineConsecutiveIssetsFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\LanguageConstruct\CombineConsecutiveIssetsFixer>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(CombineConsecutiveIssetsFixer::class)]
 final class CombineConsecutiveIssetsFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php $a = isset($a, $b)  ;',
-                '<?php $a = isset($a) && isset($b);',
-            ],
-            [
-                '<?php $a = isset($a, $b,$c)  ;',
-                '<?php $a = isset($a) && isset($b,$c);',
-            ],
-            [
-                '<?php $a = isset($a,$c, $b,$c)  ;',
-                '<?php $a = isset($a,$c) && isset($b,$c);',
-            ],
-            [
-                '<?php $a = isset($a,$c, $b)  ;',
-                '<?php $a = isset($a,$c) && isset($b);',
-            ],
-            [
-                '<?php $a = isset($a, $b)   || isset($c, $e)  ?>',
-                '<?php $a = isset($a) && isset($b) || isset($c) && isset($e)?>',
-            ],
-            [
-                '<?php $a = isset($a[a() ? b() : $d], $b)  ;',
-                '<?php $a = isset($a[a() ? b() : $d]) && isset($b);',
-            ],
-            [
-                '<?php $a = isset($a[$b], $b/**/)  ;',
-                '<?php $a = isset($a[$b]/**/) && isset($b);',
-            ],
-            [
-                '<?php $a = isset ( $a, $c, $d /*1*/ )                 ;',
-                '<?php $a = isset ( $a /*1*/ )    &&    isset ( $c   ) && isset( $d );',
-            ],
-            'minimal fix case' => [
-                '<?php isset($a, $b);',
-                '<?php isset($a)&&isset($b);',
-            ],
-            [
-                '<?php isset($a, $b, $c)    ;',
-                '<?php isset($a) && isset($b) && isset($c);',
-            ],
-            [
-                '<?php $a = isset($a,$c, $b,$c, $b,$c,$d,$f, $b)      ;',
-                '<?php $a = isset($a,$c) && isset($b,$c) && isset($b,$c,$d,$f) && isset($b);',
-            ],
-            'comments' => [
-                '<?php
+        yield [
+            '<?php $a = isset($a, $b)  ;',
+            '<?php $a = isset($a) && isset($b);',
+        ];
+
+        yield [
+            '<?php $a = isset($a, $b,$c)  ;',
+            '<?php $a = isset($a) && isset($b,$c);',
+        ];
+
+        yield [
+            '<?php $a = isset($a,$c, $b,$c)  ;',
+            '<?php $a = isset($a,$c) && isset($b,$c);',
+        ];
+
+        yield [
+            '<?php $a = isset($a,$c, $b)  ;',
+            '<?php $a = isset($a,$c) && isset($b);',
+        ];
+
+        yield [
+            '<?php $a = isset($a, $b)   || isset($c, $e)  ?>',
+            '<?php $a = isset($a) && isset($b) || isset($c) && isset($e)?>',
+        ];
+
+        yield [
+            '<?php $a = isset($a[a() ? b() : $d], $b)  ;',
+            '<?php $a = isset($a[a() ? b() : $d]) && isset($b);',
+        ];
+
+        yield [
+            '<?php $a = isset($a[$b], $b/**/)  ;',
+            '<?php $a = isset($a[$b]/**/) && isset($b);',
+        ];
+
+        yield [
+            '<?php $a = isset ( $a, $c, $d /*1*/ )                 ;',
+            '<?php $a = isset ( $a /*1*/ )    &&    isset ( $c   ) && isset( $d );',
+        ];
+
+        yield 'minimal fix case' => [
+            '<?php {{isset($a, $b);}}',
+            '<?php {{isset($a)&&isset($b);}}',
+        ];
+
+        yield [
+            '<?php foo(isset($a, $b, $c)    );',
+            '<?php foo(isset($a) && isset($b) && isset($c));',
+        ];
+
+        yield [
+            '<?php isset($a, $b)   && !isset($c) ?>',
+            '<?php isset($a) && isset($b) && !isset($c) ?>',
+        ];
+
+        yield [
+            '<?php $a = isset($a,$c, $b,$c, $b,$c,$d,$f, $b)      ;',
+            '<?php $a = isset($a,$c) && isset($b,$c) && isset($b,$c,$d,$f) && isset($b);',
+        ];
+
+        yield 'comments' => [
+            '<?php
 
 $a =#0
 isset#1
@@ -99,7 +123,7 @@ $a, $b,$c, $d#3
 */
  '.'
 ;',
-                '<?php
+            '<?php
 
 $a =#0
 isset#1
@@ -116,9 +140,10 @@ isset
 */
 )&& isset($d)
 ;',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     $a = isset($a, $b, $c, $d, $e, $f)          ;
                     echo 1; echo 1; echo 1; echo 1; echo 1; echo 1; echo 1;
                     echo 1; echo 1; echo 1; echo 1; echo 1; echo 1; echo 1;
@@ -126,7 +151,7 @@ isset
                     echo 1; echo 1; echo 1; echo 1; echo 1; echo 1; echo 1;
                     $a = isset($a, $b)  ;
                 ',
-                '<?php
+            '<?php
                     $a = isset($a) && isset($b) && isset($c) && isset($d) && isset($e) && isset($f);
                     echo 1; echo 1; echo 1; echo 1; echo 1; echo 1; echo 1;
                     echo 1; echo 1; echo 1; echo 1; echo 1; echo 1; echo 1;
@@ -134,34 +159,57 @@ isset
                     echo 1; echo 1; echo 1; echo 1; echo 1; echo 1; echo 1;
                     $a = isset($a) && isset($b);
                 ',
-            ],
-            // don't fix cases
-            [
-                '<?php $a = isset($a) && $a->isset(); $b=isset($d);',
-            ],
-            [
-                '<?php $a = isset($a) && !isset($b);',
-            ],
-            [
-                '<?php $a = !isset($a) && isset($b);',
-            ],
-            [
-                '<?php $a = !isset($container[$a]) && isset($container[$b]) && !isset($container[$c]) && isset($container[$d]);',
-            ],
         ];
-    }
 
-    /**
-     * @requires PHP 7.0
-     */
-    public function testAnonymousClass()
-    {
-        $this->doTest(
+        yield [
+            '<?php $d = isset($z[1], $z[2], $z[3])     || false;',
+            '<?php $d = isset($z[1]) && isset($z[2]) && isset($z[3]) || false;',
+        ];
+
+        yield [
+            '<?php
+                    $a = isset($a, $b)   && isset($c) === false;
+                    $a = isset($a, $b)   && isset($c) | false;
+                    $a = isset($a, $b)   && isset($c) ^ false;
+                ',
+            '<?php
+                    $a = isset($a) && isset($b) && isset($c) === false;
+                    $a = isset($a) && isset($b) && isset($c) | false;
+                    $a = isset($a) && isset($b) && isset($c) ^ false;
+                ',
+        ];
+
+        // don't fix cases
+        yield [
+            '<?php $a = isset($a) && $a->isset(); $b=isset($d);',
+        ];
+
+        yield [
+            '<?php
+                    $a = !isset($a) && isset($b);
+                    $a = !isset($a) && !isset($b);
+                    $a = isset($a) && !isset($b);
+                    //
+                    $a = isset($b) && isset($c) === false;
+                    $a = isset($b) && isset($c) | false;
+                    $a = isset($b) && isset($c) ^ false;
+                    //
+                    $a = false === isset($b) && isset($c);
+                    $a = false | isset($b) && isset($c);
+                    $a = false ^ isset($b) && isset($c);
+                ',
+        ];
+
+        yield [
+            '<?php $a = !isset($container[$a]) && isset($container[$b]) && !isset($container[$c]) && isset($container[$d]);',
+        ];
+
+        yield 'anonymous class' => [
             '<?php
                 class A {function isset(){}} // isset($b) && isset($c)
                 $a = new A(); /** isset($b) && isset($c) */
                 if (isset($b) && $a->isset()) {}
-            '
-        );
+            ',
+        ];
     }
 }

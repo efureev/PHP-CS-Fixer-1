@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,51 +14,62 @@
 
 namespace PhpCsFixer\Tests\Fixer\Operator;
 
+use PhpCsFixer\Fixer\Operator\NotOperatorWithSpaceFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Javier Spagnoletti <phansys@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Operator\NotOperatorWithSpaceFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Operator\NotOperatorWithSpaceFixer>
+ *
+ * @author Javier Spagnoletti <phansys@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NotOperatorWithSpaceFixer::class)]
 final class NotOperatorWithSpaceFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php $i = 0; $i++; ++$i; $foo = ! false || ( ! true);',
-                '<?php $i = 0; $i++; ++$i; $foo = !false || (!true);',
-            ],
-            [
-                '<?php $i = 0; $i--; --$i; $foo = ! false || ($i && ! true);',
-                '<?php $i = 0; $i--; --$i; $foo = !false || ($i && !true);',
-            ],
-            [
-                '<?php $i = 0; $i--; $foo = ! false || ($i && ! /* some comment */true);',
-                '<?php $i = 0; $i--; $foo = !false || ($i && !/* some comment */true);',
-            ],
-            [
-                '<?php $i = 0; $i--; $foo = ! false || ($i && !    true);',
-                '<?php $i = 0; $i--; $foo = !false || ($i && !    true);',
-            ],
-            [
-                '<?php $i = 0; $i--; $foo = ! false || ($i &&    !    true);',
-                '<?php $i = 0; $i--; $foo = !false || ($i &&    !    true);',
-            ],
+        yield [
+            '<?php $i = 0; $i++; ++$i; $foo = ! false || ( ! true);',
+            '<?php $i = 0; $i++; ++$i; $foo = !false || (!true);',
+        ];
+
+        yield [
+            '<?php $i = 0; $i--; --$i; $foo = ! false || ($i && ! true);',
+            '<?php $i = 0; $i--; --$i; $foo = !false || ($i && !true);',
+        ];
+
+        yield [
+            '<?php $i = 0; $i--; $foo = ! false || ($i && ! /* some comment */true);',
+            '<?php $i = 0; $i--; $foo = !false || ($i && !/* some comment */true);',
+        ];
+
+        yield [
+            '<?php $i = 0; $i--; $foo = ! false || ($i && !    true);',
+            '<?php $i = 0; $i--; $foo = !false || ($i && !    true);',
+        ];
+
+        yield [
+            '<?php $i = 0; $i--; $foo = ! false || ($i &&    !    true);',
+            '<?php $i = 0; $i--; $foo = !false || ($i &&    !    true);',
         ];
     }
 }

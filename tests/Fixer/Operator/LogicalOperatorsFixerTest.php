@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,63 +14,77 @@
 
 namespace PhpCsFixer\Tests\Fixer\Operator;
 
+use PhpCsFixer\Fixer\Operator\LogicalOperatorsFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Haralan Dobrev <hkdobrev@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Operator\LogicalOperatorsFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Operator\LogicalOperatorsFixer>
+ *
+ * @author Haralan Dobrev <hkdobrev@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(LogicalOperatorsFixer::class)]
 final class LogicalOperatorsFixerTest extends AbstractFixerTestCase
 {
     /**
      * @dataProvider provideFixCases
-     *
-     * @param string $expected
-     * @param string $input
      */
-    public function testFix($expected, $input)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, string $input): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php if ($a == "foo" && $b == "bar") {}',
-                '<?php if ($a == "foo" and $b == "bar") {}',
-            ],
-            [
-                '<?php if ($a == "foo" || $b == "bar") {}',
-                '<?php if ($a == "foo" or $b == "bar") {}',
-            ],
-            [
-                '<?php if ($a == "foo" && ($b == "bar" || $c == "baz")) {}',
-                '<?php if ($a == "foo" and ($b == "bar" or $c == "baz")) {}',
-            ],
-            [
-                '<?php if ($a == "foo" && ($b == "bar" || $c == "baz")) {}',
-                '<?php if ($a == "foo" and ($b == "bar" || $c == "baz")) {}',
-            ],
-            [
-                '<?php if ($a == "foo" && ($b == "bar" || $c == "baz")) {}',
-                '<?php if ($a == "foo" && ($b == "bar" or $c == "baz")) {}',
-            ],
-            [
-                '<?php if ($a == "foo" && ($b == "bar" || $c == "baz")) {}',
-                '<?php if ($a == "foo" AND ($b == "bar" OR $c == "baz")) {}',
-            ],
-            [
-                '<?php if ($a == "foo" && ($b == "bar" || $c == "baz")) {}',
-                '<?php if ($a == "foo" and ($b == "bar" OR $c == "baz")) {}',
-            ],
-            [
-                '<?php if ($a == "foo" && ($b == "bar" || $c == "baz")) {}',
-                '<?php if ($a == "foo" AND ($b == "bar" or $c == "baz")) {}',
-            ],
+        yield [
+            '<?php if ($a == "foo" && $b == "bar") {}',
+            '<?php if ($a == "foo" and $b == "bar") {}',
+        ];
+
+        yield [
+            '<?php if ($a == "foo" || $b == "bar") {}',
+            '<?php if ($a == "foo" or $b == "bar") {}',
+        ];
+
+        yield [
+            '<?php if ($a == "foo" && ($b == "bar" || $c == "baz")) {}',
+            '<?php if ($a == "foo" and ($b == "bar" or $c == "baz")) {}',
+        ];
+
+        yield [
+            '<?php if ($a == "foo" && ($b == "bar" || $c == "baz")) {}',
+            '<?php if ($a == "foo" and ($b == "bar" || $c == "baz")) {}',
+        ];
+
+        yield [
+            '<?php if ($a == "foo" && ($b == "bar" || $c == "baz")) {}',
+            '<?php if ($a == "foo" && ($b == "bar" or $c == "baz")) {}',
+        ];
+
+        yield [
+            '<?php if ($a == "foo" && ($b == "bar" || $c == "baz")) {}',
+            '<?php if ($a == "foo" AND ($b == "bar" OR $c == "baz")) {}',
+        ];
+
+        yield [
+            '<?php if ($a == "foo" && ($b == "bar" || $c == "baz")) {}',
+            '<?php if ($a == "foo" and ($b == "bar" OR $c == "baz")) {}',
+        ];
+
+        yield [
+            '<?php if ($a == "foo" && ($b == "bar" || $c == "baz")) {}',
+            '<?php if ($a == "foo" AND ($b == "bar" or $c == "baz")) {}',
         ];
     }
 }

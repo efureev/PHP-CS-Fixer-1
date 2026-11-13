@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -13,29 +15,33 @@
 namespace PhpCsFixer\Tests;
 
 use PhpCsFixer\Console\Command\FixCommand;
-use PhpCsFixer\Report\ReporterFactory;
+use PhpCsFixer\Console\ConfigurationResolver;
+use PhpCsFixer\Console\Report\FixReport\ReporterFactory;
 use PhpCsFixer\ToolInfo;
+use PHPUnit\Framework\Attributes\CoversNothing;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Group;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Tester\CommandTester;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
  * @coversNothing
+ *
  * @group covers-nothing
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversNothing]
+#[Group('covers-nothing')]
 final class TextDiffTest extends TestCase
 {
     /**
-     * @param string $expected
-     * @param string $format
-     * @param bool   $isDecorated
-     *
-     * @dataProvider provideDiffReportingCases
+     * @dataProvider provideDiffReportingDecoratedCases
      */
-    public function testDiffReportingDecorated($expected, $format, $isDecorated)
+    #[DataProvider('provideDiffReportingDecoratedCases')]
+    public function testDiffReportingDecorated(string $expected, string $format, bool $isDecorated): void
     {
         $command = new FixCommand(new ToolInfo());
         $commandTester = new CommandTester($command);
@@ -47,55 +53,64 @@ final class TextDiffTest extends TestCase
                 '--format' => $format,
                 '--rules' => 'cast_spaces',
                 '--using-cache' => 'no',
+                '--config' => ConfigurationResolver::IGNORE_CONFIG_FILE,
             ],
             [
                 'decorated' => $isDecorated,
+                'interactive' => false,
                 'verbosity' => OutputInterface::VERBOSITY_NORMAL,
-            ]
+            ],
         );
 
         if ($isDecorated !== $commandTester->getOutput()->isDecorated()) {
-            $this->markTestSkipped(sprintf('Output should %sbe decorated.', $isDecorated ? '' : 'not '));
+            self::markTestSkipped(\sprintf('Output should %sbe decorated.', $isDecorated ? '' : 'not '));
         }
 
         if ($isDecorated !== $commandTester->getOutput()->getFormatter()->isDecorated()) {
-            $this->markTestSkipped(sprintf('Formatter should %sbe decorated.', $isDecorated ? '' : 'not '));
+            self::markTestSkipped(\sprintf('Formatter should %sbe decorated.', $isDecorated ? '' : 'not '));
         }
 
-        $this->assertStringMatchesFormat($expected, $commandTester->getDisplay(false));
+        self::assertStringMatchesFormat($expected, $commandTester->getDisplay(false));
     }
 
-    public function provideDiffReportingCases()
+    /**
+     * @return iterable<int, array{string, string, bool}>
+     */
+    public static function provideDiffReportingDecoratedCases(): iterable
     {
         $expected = <<<'TEST'
-%A$output->writeln('<error>'.(int)$output.'</error>');%A
-%A$output->writeln('<error>'.(int) $output.'</error>');%A
-TEST;
-        $cases = [];
+            %A$output->writeln('<error>'.(int)$output.'</error>');%A
+            %A$output->writeln('<error>'.(int) $output.'</error>');%A
+            %A$output->writeln('<error> TEST </error>');%A
+            %A$output->writeln('<error>'.(int)$output.'</error>');%A
+            %A$output->writeln('<error>'.(int) $output.'</error>');%A
+            TEST;
+
         foreach (['txt', 'xml', 'junit'] as $format) {
-            $cases[] = [$expected, $format, true];
-            $cases[] = [$expected, $format, false];
+            yield [$expected, $format, true];
+
+            yield [$expected, $format, false];
         }
 
-        $expected = substr(json_encode($expected), 1, -1);
-        $cases[] = [$expected, 'json', true];
-        $cases[] = [$expected, 'json', false];
+        $expected = substr(json_encode($expected, \JSON_THROW_ON_ERROR), 1, -1);
 
-        return $cases;
+        yield [$expected, 'json', true];
+
+        yield [$expected, 'json', false];
     }
 
     /**
      * Test to make sure @see TextDiffTest::provideDiffReportingCases covers all formats.
      */
-    public function testAllFormatsCovered()
+    public function testAllFormatsCovered(): void
     {
-        $factory = ReporterFactory::create();
+        $factory = new ReporterFactory();
         $formats = $factory->registerBuiltInReporters()->getFormats();
         sort($formats);
 
-        $this->assertSame(
-            ['checkstyle', 'json', 'junit', 'txt', 'xml'],
-            $formats
+        self::assertSame(
+            ['checkstyle', 'gitlab', 'json', 'junit', 'txt', 'xml'],
+            $formats,
         );
     }
 }

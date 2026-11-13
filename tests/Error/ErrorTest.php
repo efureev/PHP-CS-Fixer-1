@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,31 +16,82 @@ namespace PhpCsFixer\Tests\Error;
 
 use PhpCsFixer\Error\Error;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @internal
  *
  * @covers \PhpCsFixer\Error\Error
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(Error::class)]
 final class ErrorTest extends TestCase
 {
-    public function testThatErrorTypeConstantValuesAreDifferent()
+    public function testConstructorSetsValues(): void
     {
-        $this->assertNotSame(Error::TYPE_INVALID, Error::TYPE_EXCEPTION);
-        $this->assertNotSame(Error::TYPE_EXCEPTION, Error::TYPE_LINT);
-    }
-
-    public function testConstructorSetsValues()
-    {
-        $type = 123;
+        $type = 1;
         $filePath = 'foo.php';
 
         $error = new Error(
             $type,
-            $filePath
+            $filePath,
         );
 
-        $this->assertSame($type, $error->getType());
-        $this->assertSame($filePath, $error->getFilePath());
+        self::assertSame($type, $error->getType());
+        self::assertSame($filePath, $error->getFilePath());
+        self::assertNull($error->getSource());
+        self::assertSame([], $error->getAppliedFixers());
+        self::assertSame('', $error->getDiff());
+    }
+
+    public function testConstructorSetsValues2(): void
+    {
+        $type = 2;
+        $filePath = __FILE__;
+        $source = new \Exception();
+        $appliedFixers = ['some_rule'];
+        $diff = '__diff__';
+
+        $error = new Error(
+            $type,
+            $filePath,
+            $source,
+            $appliedFixers,
+            $diff,
+        );
+
+        self::assertSame($type, $error->getType());
+        self::assertSame($filePath, $error->getFilePath());
+        self::assertSame($source, $error->getSource());
+        self::assertSame($appliedFixers, $error->getAppliedFixers());
+        self::assertSame($diff, $error->getDiff());
+    }
+
+    public function testErrorCanBeSerialised(): void
+    {
+        $type = 2;
+        $filePath = __FILE__;
+        $source = new \Exception();
+        $appliedFixers = ['some_rule'];
+        $diff = '__diff__';
+
+        $error = new Error(
+            $type,
+            $filePath,
+            $source,
+            $appliedFixers,
+            $diff,
+        );
+        $serialisedError = $error->jsonSerialize();
+
+        self::assertSame($type, $serialisedError['type']);
+        self::assertSame($filePath, $serialisedError['filePath']);
+        self::assertSame($source->getMessage(), $serialisedError['source']['message']);
+        self::assertSame($source->getLine(), $serialisedError['source']['line']);
+        self::assertSame($source->getFile(), $serialisedError['source']['file']);
+        self::assertSame($source->getCode(), $serialisedError['source']['code']);
+        self::assertSame($appliedFixers, $serialisedError['appliedFixers']);
+        self::assertSame($diff, $serialisedError['diff']);
     }
 }

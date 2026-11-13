@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,35 +14,45 @@
 
 namespace PhpCsFixer\Tests\Fixer\Strict;
 
+use PhpCsFixer\Fixer\Strict\StrictComparisonFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Strict\StrictComparisonFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Strict\StrictComparisonFixer>
+ *
+ * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(StrictComparisonFixer::class)]
 final class StrictComparisonFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideTestFixCases
+     * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideTestFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            ['<?php $a === $b;', '<?php $a == $b;'],
-            ['<?php $a !== $b;', '<?php $a != $b;'],
-            ['<?php $a !== $b;', '<?php $a <> $b;'],
-            ['<?php echo "$a === $b";'],
-        ];
+        yield ['<?php $a === $b;', '<?php $a == $b;'];
+
+        yield ['<?php $a !== $b;', '<?php $a != $b;'];
+
+        yield ['<?php $a !== $b;', '<?php $a <> $b;'];
+
+        yield ['<?php echo "$a === $b";'];
     }
 }

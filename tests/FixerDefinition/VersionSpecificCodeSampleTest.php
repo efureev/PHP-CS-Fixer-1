@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -15,7 +17,8 @@ namespace PhpCsFixer\Tests\FixerDefinition;
 use PhpCsFixer\FixerDefinition\VersionSpecificationInterface;
 use PhpCsFixer\FixerDefinition\VersionSpecificCodeSample;
 use PhpCsFixer\Tests\TestCase;
-use Prophecy\Prophecy;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @author Andreas Möller <am@localheinz.com>
@@ -23,10 +26,13 @@ use Prophecy\Prophecy;
  * @internal
  *
  * @covers \PhpCsFixer\FixerDefinition\VersionSpecificCodeSample
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(VersionSpecificCodeSample::class)]
 final class VersionSpecificCodeSampleTest extends TestCase
 {
-    public function testConstructorSetsValues()
+    public function testConstructorSetsValues(): void
     {
         $code = '<php echo $foo;';
         $configuration = [
@@ -35,62 +41,62 @@ final class VersionSpecificCodeSampleTest extends TestCase
 
         $codeSample = new VersionSpecificCodeSample(
             $code,
-            $this->createVersionSpecificationMock()->reveal(),
-            $configuration
+            $this->createVersionSpecificationDouble(),
+            $configuration,
         );
 
-        $this->assertSame($code, $codeSample->getCode());
-        $this->assertSame($configuration, $codeSample->getConfiguration());
+        self::assertSame($code, $codeSample->getCode());
+        self::assertSame($configuration, $codeSample->getConfiguration());
     }
 
-    public function testConfigurationDefaultsToNull()
+    public function testConfigurationDefaultsToNull(): void
     {
         $codeSample = new VersionSpecificCodeSample(
             '<php echo $foo;',
-            $this->createVersionSpecificationMock()->reveal()
+            $this->createVersionSpecificationDouble(),
         );
 
-        $this->assertNull($codeSample->getConfiguration());
+        self::assertNull($codeSample->getConfiguration());
     }
 
     /**
-     * @dataProvider provideIsSuitableForVersionUsesVersionSpecificationCases
-     *
-     * @param int  $version
-     * @param bool $isSatisfied
+     * @dataProvider provideIsSuitableForUsesVersionSpecificationCases
      */
-    public function testIsSuitableForUsesVersionSpecification($version, $isSatisfied)
+    #[DataProvider('provideIsSuitableForUsesVersionSpecificationCases')]
+    public function testIsSuitableForUsesVersionSpecification(int $version, bool $isSatisfied): void
     {
-        $versionSpecification = $this->createVersionSpecificationMock();
-
-        $versionSpecification
-            ->isSatisfiedBy($version)
-            ->willReturn($isSatisfied);
-
         $codeSample = new VersionSpecificCodeSample(
             '<php echo $foo;',
-            $versionSpecification->reveal()
+            $this->createVersionSpecificationDouble($isSatisfied),
         );
 
-        $this->assertSame($isSatisfied, $codeSample->isSuitableFor($version));
+        self::assertSame($isSatisfied, $codeSample->isSuitableFor($version));
     }
 
     /**
-     * @return array
+     * @return iterable<string, array{int, bool}>
      */
-    public function provideIsSuitableForVersionUsesVersionSpecificationCases()
+    public static function provideIsSuitableForUsesVersionSpecificationCases(): iterable
     {
-        return [
-            'is-satisfied' => [\PHP_VERSION_ID, true],
-            'is-not-satisfied' => [\PHP_VERSION_ID, false],
-        ];
+        yield 'is-satisfied' => [100, true];
+
+        yield 'is-not-satisfied' => [100, false];
     }
 
-    /**
-     * @return Prophecy\ObjectProphecy|VersionSpecificationInterface
-     */
-    private function createVersionSpecificationMock()
+    private function createVersionSpecificationDouble(bool $isSatisfied = true): VersionSpecificationInterface
     {
-        return $this->prophesize(\PhpCsFixer\FixerDefinition\VersionSpecificationInterface::class);
+        return new class($isSatisfied) implements VersionSpecificationInterface {
+            private bool $isSatisfied;
+
+            public function __construct(bool $isSatisfied)
+            {
+                $this->isSatisfied = $isSatisfied;
+            }
+
+            public function isSatisfiedBy(int $version): bool
+            {
+                return $this->isSatisfied;
+            }
+        };
     }
 }

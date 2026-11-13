@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,62 +14,134 @@
 
 namespace PhpCsFixer\Tests\Fixer\LanguageConstruct;
 
+use PhpCsFixer\Fixer\LanguageConstruct\ExplicitIndirectVariableFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 
 /**
- * @author Filippo Tessarotto <zoeslam@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\LanguageConstruct\ExplicitIndirectVariableFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\LanguageConstruct\ExplicitIndirectVariableFixer>
+ *
+ * @author Filippo Tessarotto <zoeslam@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(ExplicitIndirectVariableFixer::class)]
 final class ExplicitIndirectVariableFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideTestFixCases
-     * @requires PHP 7.0
+     * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideTestFixCases()
+    /**
+     * @return iterable<string, array{0: string, 1?: null|string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php echo ${$foo}($bar);',
-                '<?php echo $$foo($bar);',
-            ],
-            [
-                '<?php echo ${$foo}[\'bar\'][\'baz\'];',
-                '<?php echo $$foo[\'bar\'][\'baz\'];',
-            ],
-            [
-                '<?php echo $foo->{$bar}[\'baz\'];',
-                '<?php echo $foo->$bar[\'baz\'];',
-            ],
-            [
-                '<?php echo $foo->{$bar}[\'baz\']();',
-                '<?php echo $foo->$bar[\'baz\']();',
-            ],
-            [
-                '<?php echo $
+        yield 'variable variable function call' => [
+            '<?php echo ${$foo}($bar);',
+            '<?php echo $$foo($bar);',
+        ];
+
+        yield 'variable variable array fetch' => [
+            '<?php echo ${$foo}[\'bar\'][\'baz\'];',
+            '<?php echo $$foo[\'bar\'][\'baz\'];',
+        ];
+
+        yield 'dynamic property access' => [
+            '<?php echo $foo->{$bar}[\'baz\'];',
+            '<?php echo $foo->$bar[\'baz\'];',
+        ];
+
+        yield 'dynamic property access with method call' => [
+            '<?php echo $foo->{$bar}[\'baz\']();',
+            '<?php echo $foo->$bar[\'baz\']();',
+        ];
+
+        yield 'variable variable with comments between dollar signs' => [
+            '<?php echo $
 /* C1 */
 // C2
 {$foo}
 // C3
 ;',
-                '<?php echo $
+            '<?php echo $
 /* C1 */
 // C2
 $foo
 // C3
 ;',
-            ],
+        ];
+
+        yield 'dynamic static property access using variable variable' => [
+            '<?php echo Foo::${$bar};',
+            '<?php echo Foo::$$bar;',
+        ];
+
+        yield 'dynamic static property access using variable variable with method call' => [
+            '<?php echo Foo::${$bar}->baz();',
+            '<?php echo Foo::$$bar->baz();',
+        ];
+    }
+
+    /**
+     * @dataProvider provideFix80Cases
+     *
+     * @requires PHP >= 8.0.0
+     */
+    #[DataProvider('provideFix80Cases')]
+    #[RequiresPhp('>= 8.0.0')]
+    public function testFix80(string $expected, ?string $input): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1?: null|string}>
+     */
+    public static function provideFix80Cases(): iterable
+    {
+        yield 'dynamic property fetch with nullsafe operator' => [
+            '<?php echo $foo?->{$bar}["baz"];',
+            '<?php echo $foo?->$bar["baz"];',
+        ];
+
+        yield 'dynamic property fetch with nullsafe operator and method call' => [
+            '<?php echo $foo?->{$bar}["baz"]();',
+            '<?php echo $foo?->$bar["baz"]();',
+        ];
+    }
+
+    /**
+     * @dataProvider provideFix83Cases
+     *
+     * @requires PHP >= 8.3.0
+     */
+    #[DataProvider('provideFix83Cases')]
+    #[RequiresPhp('>= 8.3.0')]
+    public function testFix83(string $expected, ?string $input): void
+    {
+        $this->doTest($expected, $input);
+    }
+
+    /**
+     * @return iterable<string, array{0: string, 1?: null|string}>
+     */
+    public static function provideFix83Cases(): iterable
+    {
+        yield 'dynamic class const fetch with variable variable' => [
+            '<?php echo Foo::{${$bar}};',
+            '<?php echo Foo::{$$bar};',
         ];
     }
 }

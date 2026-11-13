@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,6 +16,9 @@ namespace PhpCsFixer\Tests\Tokenizer\Transformer;
 
 use PhpCsFixer\Tests\Test\AbstractTransformerTestCase;
 use PhpCsFixer\Tokenizer\CT;
+use PhpCsFixer\Tokenizer\Transformer\ArrayTypehintTransformer;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
@@ -21,39 +26,56 @@ use PhpCsFixer\Tokenizer\CT;
  * @internal
  *
  * @covers \PhpCsFixer\Tokenizer\Transformer\ArrayTypehintTransformer
+ *
+ * @phpstan-import-type _TransformerTestExpectedKindsUnderIndex from AbstractTransformerTestCase
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(ArrayTypehintTransformer::class)]
 final class ArrayTypehintTransformerTest extends AbstractTransformerTestCase
 {
     /**
-     * @param string $source
+     * @param _TransformerTestExpectedKindsUnderIndex $expectedTokens
      *
      * @dataProvider provideProcessCases
      */
-    public function testProcess($source, array $expectedTokens = [])
+    #[DataProvider('provideProcessCases')]
+    public function testProcess(string $source, array $expectedTokens = []): void
     {
         $this->doTest(
             $source,
             $expectedTokens,
             [
-                T_ARRAY,
+                \T_ARRAY,
                 CT::T_ARRAY_TYPEHINT,
-            ]
+            ],
         );
     }
 
-    public function provideProcessCases()
+    /**
+     * @return iterable<int, array{string, _TransformerTestExpectedKindsUnderIndex}>
+     */
+    public static function provideProcessCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
 $a = array(1, 2, 3);
 function foo (array /** @type array */ $bar)
 {
 }',
-                [
-                    5 => T_ARRAY,
-                    22 => CT::T_ARRAY_TYPEHINT,
-                ],
+            [
+                5 => \T_ARRAY,
+                22 => CT::T_ARRAY_TYPEHINT,
+            ],
+        ];
+
+        yield [
+            '<?php
+$a = array(1, 2, 3);
+$fn = fn(array /** @type array */ $bar) => null;',
+            [
+                5 => \T_ARRAY,
+                23 => CT::T_ARRAY_TYPEHINT,
             ],
         ];
     }

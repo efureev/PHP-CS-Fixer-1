@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -23,42 +25,42 @@ use PhpCsFixer\Tokenizer\Tokens;
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
  *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 final class ClassConstantTransformer extends AbstractTransformer
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function getCustomTokens()
+    public function getRequiredPhpVersionId(): int
+    {
+        return 5_05_00;
+    }
+
+    public function isCandidate(Tokens $tokens): bool
+    {
+        return $tokens->isAnyTokenKindsFound([\T_CLASS, \T_STRING]);
+    }
+
+    public function process(Tokens $tokens): void
+    {
+        foreach ($tokens as $index => $token) {
+            if (!$token->equalsAny([
+                [\T_CLASS, 'class'],
+                [\T_STRING, 'class'],
+            ], false)) {
+                continue;
+            }
+
+            $prevIndex = $tokens->getPrevMeaningfulToken($index);
+            $prevToken = $tokens[$prevIndex];
+
+            if ($prevToken->isGivenKind(\T_DOUBLE_COLON)) {
+                $tokens[$index] = new Token([CT::T_CLASS_CONSTANT, $token->getContent()]);
+            }
+        }
+    }
+
+    public function getCustomTokens(): array
     {
         return [CT::T_CLASS_CONSTANT];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getRequiredPhpVersionId()
-    {
-        return 50500;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function process(Tokens $tokens, Token $token, $index)
-    {
-        if (!$token->equalsAny([
-            [T_CLASS, 'class'],
-            [T_STRING, 'class'],
-        ], false)) {
-            return;
-        }
-
-        $prevIndex = $tokens->getPrevMeaningfulToken($index);
-        $prevToken = $tokens[$prevIndex];
-
-        if ($prevToken->isGivenKind(T_DOUBLE_COLON)) {
-            $tokens[$index] = new Token([CT::T_CLASS_CONSTANT, $token->getContent()]);
-        }
     }
 }

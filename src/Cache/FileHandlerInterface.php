@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -16,21 +18,14 @@ namespace PhpCsFixer\Cache;
  * @author Andreas Möller <am@localheinz.com>
  *
  * @internal
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
 interface FileHandlerInterface
 {
-    /**
-     * @return string
-     */
-    public function getFile();
+    public function getFile(): string;
 
-    /**
-     * @return CacheInterface
-     */
-    public function read();
+    public function read(): ?CacheInterface;
 
-    /**
-     * @param CacheInterface $cache
-     */
-    public function write(CacheInterface $cache);
+    public function write(CacheInterface $cache): void;
 }

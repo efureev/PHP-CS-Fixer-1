@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,7 +14,10 @@
 
 namespace PhpCsFixer\Tests\Linter;
 
+use PhpCsFixer\Linter\LinterInterface;
 use PhpCsFixer\Linter\ProcessLinter;
+use PhpCsFixer\Linter\ProcessLintingResult;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
@@ -21,18 +26,37 @@ use PhpCsFixer\Linter\ProcessLinter;
  *
  * @covers \PhpCsFixer\Linter\ProcessLinter
  * @covers \PhpCsFixer\Linter\ProcessLintingResult
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(ProcessLinter::class)]
+#[CoversClass(ProcessLintingResult::class)]
 final class ProcessLinterTest extends AbstractLinterTestCase
 {
-    public function testIsAsync()
+    public function testIsAsync(): void
     {
-        $this->assertTrue($this->createLinter()->isAsync());
+        self::assertTrue($this->createLinter()->isAsync());
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function createLinter()
+    public function testSerialize(): void
+    {
+        $linter = new ProcessLinter();
+
+        $this->expectException(\BadMethodCallException::class);
+        $this->expectExceptionMessage('Cannot serialize '.ProcessLinter::class);
+
+        serialize($linter);
+    }
+
+    public function testUnserialize(): void
+    {
+        $this->expectException(\BadMethodCallException::class);
+        $this->expectExceptionMessage('Cannot unserialize '.ProcessLinter::class);
+
+        unserialize(self::createSerializedStringOfClassName(ProcessLinter::class));
+    }
+
+    protected function createLinter(): LinterInterface
     {
         return new ProcessLinter();
     }

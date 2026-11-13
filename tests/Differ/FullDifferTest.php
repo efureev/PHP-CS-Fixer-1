@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -13,17 +15,19 @@
 namespace PhpCsFixer\Tests\Differ;
 
 use PhpCsFixer\Differ\FullDiffer;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
  * @covers \PhpCsFixer\Differ\FullDiffer
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(FullDiffer::class)]
 final class FullDifferTest extends AbstractDifferTestCase
 {
-    public function testDiffReturnsDiff()
+    public function testDiffReturnsDiff(): void
     {
         $diff = '--- Original
 +++ New
@@ -42,6 +46,6 @@ final class FullDifferTest extends AbstractDifferTestCase
 ';
         $differ = new FullDiffer();
 
-        $this->assertSame($diff, $differ->diff($this->oldCode(), $this->newCode()));
+        self::assertSame($diff, $differ->diff($this->oldCode(), $this->newCode()));
     }
 }

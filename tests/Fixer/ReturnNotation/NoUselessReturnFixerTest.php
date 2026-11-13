@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,33 +14,39 @@
 
 namespace PhpCsFixer\Tests\Fixer\ReturnNotation;
 
+use PhpCsFixer\Fixer\ReturnNotation\NoUselessReturnFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author SpacePossum
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\ReturnNotation\NoUselessReturnFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\ReturnNotation\NoUselessReturnFixer>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NoUselessReturnFixer::class)]
 final class NoUselessReturnFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: non-empty-string, 1?: non-empty-string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
                     function bar($baz)
                     {
                         if ($baz)
@@ -46,9 +54,10 @@ final class NoUselessReturnFixerTest extends AbstractFixerTestCase
                         else
                             return;
                     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     function bar($baz)
                     {
                         if ($baz)
@@ -56,9 +65,10 @@ final class NoUselessReturnFixerTest extends AbstractFixerTestCase
                         elseif($a)
                             return;
                     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     function bar($baz)
                     {
                         if ($baz)
@@ -66,33 +76,36 @@ final class NoUselessReturnFixerTest extends AbstractFixerTestCase
                         else if($a)
                             return;
                     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                     function bar($baz)
                     {
                         if ($baz)
                             return;
                     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     function b($b) {
         if ($b) {
             return;
         }
          /**/
     }',
-                '<?php
+            '<?php
     function b($b) {
         if ($b) {
             return;
         }
         return /**/;
     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     class Test2
     {
         private static function a($a)
@@ -123,7 +136,7 @@ final class NoUselessReturnFixerTest extends AbstractFixerTestCase
             $d();
         }
     }',
-                '<?php
+            '<?php
     class Test2
     {
         private static function a($a)
@@ -154,44 +167,48 @@ final class NoUselessReturnFixerTest extends AbstractFixerTestCase
             $d();
         }
     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     function aT($a) {
         if ($a) {
             return;
         }
                    '.'
     }',
-                '<?php
+            '<?php
     function aT($a) {
         if ($a) {
             return;
         }
         return           ;
     }',
-            ],
-            [
-                '<?php return;',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php return;',
+        ];
+
+        yield [
+            '<?php
     function c($c) {
         if ($c) {
             return;
         }
         //'.'
     }',
-                '<?php
+            '<?php
     function c($c) {
         if ($c) {
             return;
         }
         return;//
     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     class Test {
 
         private static function d($d) {
@@ -200,7 +217,7 @@ final class NoUselessReturnFixerTest extends AbstractFixerTestCase
             }
             }
     }',
-                '<?php
+            '<?php
     class Test {
 
         private static function d($d) {
@@ -209,16 +226,18 @@ final class NoUselessReturnFixerTest extends AbstractFixerTestCase
             }
             return;}
     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     interface FooInterface
     {
         public function fnc();
     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     abstract class AbstractFoo
     {
         abstract public function fnc();
@@ -228,13 +247,15 @@ final class NoUselessReturnFixerTest extends AbstractFixerTestCase
             echo 1 . self::fn2();//{}
         }
     }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     function foo () { }',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
                 $a = function() {
                        /**/
                      '.'
@@ -242,7 +263,7 @@ final class NoUselessReturnFixerTest extends AbstractFixerTestCase
                     '.'
                 };
                 ',
-                '<?php
+            '<?php
                 $a = function() {
                     return  ; /**/
                     return ;
@@ -250,7 +271,6 @@ final class NoUselessReturnFixerTest extends AbstractFixerTestCase
                     return;
                 };
                 ',
-            ],
         ];
     }
 }

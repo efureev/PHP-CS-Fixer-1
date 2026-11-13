@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,40 +14,48 @@
 
 namespace PhpCsFixer\Tests\Fixer\ArrayNotation;
 
+use PhpCsFixer\Fixer\ArrayNotation\NoMultilineWhitespaceAroundDoubleArrowFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Carlos Cirello <carlos.cirello.nl@gmail.com>
- * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
- * @author Graham Campbell <graham@alt-three.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\ArrayNotation\NoMultilineWhitespaceAroundDoubleArrowFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\ArrayNotation\NoMultilineWhitespaceAroundDoubleArrowFixer>
+ *
+ * @author Carlos Cirello <carlos.cirello.nl@gmail.com>
+ * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+ * @author Graham Campbell <hello@gjcampbell.co.uk>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NoMultilineWhitespaceAroundDoubleArrowFixer::class)]
 final class NoMultilineWhitespaceAroundDoubleArrowFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                '<?php
+        yield [
+            '<?php
     $arr = array(
         $a => array(1),
         $a => array(0 => array())
     );',
-                '<?php
+            '<?php
     $arr = array(
         $a =>
             array(1),
@@ -53,9 +63,10 @@ final class NoMultilineWhitespaceAroundDoubleArrowFixerTest extends AbstractFixe
             array(0 =>
             array())
     );',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     $a = array(
         "aaaaaa"    =>    "b",
         "c" => "d",
@@ -63,7 +74,7 @@ final class NoMultilineWhitespaceAroundDoubleArrowFixerTest extends AbstractFixe
         "ggg" => array(),
         "hh"      => [],
     );',
-                '<?php
+            '<?php
     $a = array(
         "aaaaaa"    =>    "b",
         "c"
@@ -75,9 +86,10 @@ final class NoMultilineWhitespaceAroundDoubleArrowFixerTest extends AbstractFixe
         "hh"      =>
             [],
     );',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     $hello = array(
         "foo" =>
         // hello there
@@ -92,7 +104,50 @@ final class NoMultilineWhitespaceAroundDoubleArrowFixerTest extends AbstractFixe
          */
         array()
     );',
-            ],
+        ];
+
+        yield [
+            '<?php
+                    $fn = fn() => null;',
+            '<?php
+                    $fn = fn()
+                        =>
+                            null;',
+        ];
+
+        yield [
+            '<?php
+                    $foo = [
+                        1 /* foo */ => $one,
+                        2 => $two
+                    ];',
+            '<?php
+                    $foo = [
+                        1 /* foo */
+                            =>
+                                $one,
+                        2
+                            =>
+                                $two
+                    ];',
+        ];
+
+        yield [
+            '<?php
+                    $foo = [
+                        1 // foo
+                            => $one,
+                        2 => $two,
+                    ];',
+            '<?php
+                    $foo = [
+                        1 // foo
+                            =>
+                                $one,
+                        2
+                            =>
+                                $two,
+                    ];',
         ];
     }
 }

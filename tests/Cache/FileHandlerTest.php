@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -13,9 +15,13 @@
 namespace PhpCsFixer\Tests\Cache;
 
 use PhpCsFixer\Cache\Cache;
+use PhpCsFixer\Cache\CacheInterface;
 use PhpCsFixer\Cache\FileHandler;
 use PhpCsFixer\Cache\Signature;
+use PhpCsFixer\Cache\SignatureInterface;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Symfony\Component\Filesystem\Exception\IOException;
 
 /**
  * @author Andreas Möller <am@localheinz.com>
@@ -23,10 +29,13 @@ use PhpCsFixer\Tests\TestCase;
  * @internal
  *
  * @covers \PhpCsFixer\Cache\FileHandler
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(FileHandler::class)]
 final class FileHandlerTest extends TestCase
 {
-    protected function tearDown()
+    protected function tearDown(): void
     {
         parent::tearDown();
 
@@ -37,34 +46,25 @@ final class FileHandlerTest extends TestCase
         }
     }
 
-    public function testImplementsHandlerInterface()
+    public function testConstructorSetsFile(): void
     {
         $file = $this->getFile();
 
         $handler = new FileHandler($file);
 
-        $this->assertInstanceOf(\PhpCsFixer\Cache\FileHandlerInterface::class, $handler);
+        self::assertSame($file, $handler->getFile());
     }
 
-    public function testConstructorSetsFile()
+    public function testReadReturnsNullIfFileDoesNotExist(): void
     {
         $file = $this->getFile();
 
         $handler = new FileHandler($file);
 
-        $this->assertSame($file, $handler->getFile());
+        self::assertNull($handler->read());
     }
 
-    public function testReadReturnsNullIfFileDoesNotExist()
-    {
-        $file = $this->getFile();
-
-        $handler = new FileHandler($file);
-
-        $this->assertNull($handler->read());
-    }
-
-    public function testReadReturnsNullIfContentCanNotBeDeserialized()
+    public function testReadReturnsNullIfContentCanNotBeDeserialized(): void
     {
         $file = $this->getFile();
 
@@ -72,21 +72,14 @@ final class FileHandlerTest extends TestCase
 
         $handler = new FileHandler($file);
 
-        $this->assertNull($handler->read());
+        self::assertNull($handler->read());
     }
 
-    public function testReadReturnsCache()
+    public function testReadReturnsCache(): void
     {
         $file = $this->getFile();
 
-        $signature = new Signature(
-            PHP_VERSION,
-            '2.0',
-            [
-                'foo',
-                'bar',
-            ]
-        );
+        $signature = $this->createSignature();
 
         $cache = new Cache($signature);
 
@@ -96,137 +89,164 @@ final class FileHandlerTest extends TestCase
 
         $cached = $handler->read();
 
-        $this->assertInstanceOf(\PhpCsFixer\Cache\CacheInterface::class, $cached);
-        $this->assertTrue($cached->getSignature()->equals($signature));
+        self::assertInstanceOf(CacheInterface::class, $cached);
+        self::assertTrue($cached->getSignature()->equals($signature));
     }
 
-    public function testWriteThrowsIOExceptionIfFileCanNotBeWritten()
+    public function testWriteThrowsIOExceptionIfFileCanNotBeWritten(): void
     {
-        $file = __DIR__.'/non-existent-directory/.php_cs.cache';
+        $file = '/../"/out/of/range/cache.json'; // impossible path
 
-        $this->expectException(\Symfony\Component\Filesystem\Exception\IOException::class);
-        $this->expectExceptionMessageRegExp(sprintf(
-            '#^Failed to write file "%s"(, ".*")?.#',
-            preg_quote($file, '#')
+        $this->expectException(IOException::class);
+        $this->expectExceptionMessageMatches(\sprintf(
+            '#^Directory of cache file "%s" does not exists and couldn\'t be created\.#',
+            preg_quote($file, '#'),
         ));
 
-        $cache = new Cache(new Signature(
-            PHP_VERSION,
-            '2.0',
-            [
-                'foo',
-                'bar',
-            ]
-        ));
+        $cache = new Cache($this->createSignature());
 
         $handler = new FileHandler($file);
 
         $handler->write($cache);
     }
 
-    public function testWriteWritesCache()
+    public function testWriteWritesCache(): void
     {
         $file = $this->getFile();
 
-        $cache = new Cache(new Signature(
-            PHP_VERSION,
-            '2.0',
-            [
-                'foo',
-                'bar',
-            ]
-        ));
+        $cache = new Cache($this->createSignature());
 
         $handler = new FileHandler($file);
 
         $handler->write($cache);
 
-        $this->assertFileExists($file);
+        self::assertFileExists($file);
 
         $actualCacheJson = file_get_contents($file);
 
-        $this->assertSame($cache->toJson(), $actualCacheJson);
+        self::assertSame($cache->toJson(), $actualCacheJson);
     }
 
-    public function testWriteCacheToDirectory()
+    public function testWriteCacheToDirectory(): void
     {
         $dir = __DIR__.'/../Fixtures/cache-file-handler';
 
         $handler = new FileHandler($dir);
 
-        $this->expectException(\Symfony\Component\Filesystem\Exception\IOException::class);
-        $this->expectExceptionMessageRegExp(sprintf(
+        $this->expectException(IOException::class);
+        $this->expectExceptionMessageMatches(\sprintf(
             '#^%s$#',
-            preg_quote('Cannot write cache file "'.realpath($dir).'" as the location exists as directory.', '#')
+            preg_quote('Cannot write cache file "'.realpath($dir).'" as the location exists as directory.', '#'),
         ));
 
-        $handler->write(new Cache(new Signature(
-            PHP_VERSION,
-            '2.0',
-            [
-                'foo',
-                'bar',
-            ]
-        )));
+        $handler->write(new Cache($this->createSignature()));
     }
 
-    public function testWriteCacheToNonWriteableFile()
+    public function testWriteCacheToNonWriteableFile(): void
     {
         $file = __DIR__.'/../Fixtures/cache-file-handler/cache-file';
         if (is_writable($file)) {
-            $this->markTestSkipped(sprintf('File "%s" must be not writeable for this tests.', realpath($file)));
-
-            return;
+            self::markTestSkipped(\sprintf('File "%s" must be not writeable for this tests.', realpath($file)));
         }
 
         $handler = new FileHandler($file);
 
-        $this->expectException(\Symfony\Component\Filesystem\Exception\IOException::class);
-        $this->expectExceptionMessageRegExp(sprintf(
+        $this->expectException(IOException::class);
+        $this->expectExceptionMessageMatches(\sprintf(
             '#^%s$#',
-            preg_quote('Cannot write to file "'.realpath($file).'" as it is not writable.', '#')
+            preg_quote('Cannot write to file "'.realpath($file).'" as it is not writable.', '#'),
         ));
 
-        $handler->write(new Cache(new Signature(
-            PHP_VERSION,
-            '2.0',
-            [
-                'foo',
-                'bar',
-            ]
-        )));
+        $handler->write(new Cache($this->createSignature()));
     }
 
-    public function testWriteCacheFilePermissions()
+    public function testWriteCacheFilePermissions(): void
     {
         $file = __DIR__.'/../Fixtures/cache-file-handler/rw_cache.test';
         @unlink($file);
 
-        $this->assertFileNotExists($file);
+        self::assertFileDoesNotExist($file);
 
         $handler = new FileHandler($file);
-        $handler->write(new Cache(new Signature(
-            PHP_VERSION,
-            '2.0',
-            [
-                'foo',
-                'bar',
-            ]
-        )));
+        $handler->write(new Cache($this->createSignature()));
 
-        $this->assertFileExists($file);
-        $this->assertTrue(@is_file($file), sprintf('Failed cache "%s" `is_file`.', $file));
-        $this->assertTrue(@is_writable($file), sprintf('Failed cache "%s" `is_writable`.', $file));
-        $this->assertTrue(@is_readable($file), sprintf('Failed cache "%s" `is_readable`.', $file));
+        self::assertFileExists($file);
+        self::assertTrue(@is_file($file), \sprintf('Failed cache "%s" `is_file`.', $file));
+        self::assertTrue(@is_writable($file), \sprintf('Failed cache "%s" `is_writable`.', $file));
+        self::assertTrue(@is_readable($file), \sprintf('Failed cache "%s" `is_readable`.', $file));
 
         @unlink($file);
     }
 
-    /**
-     * @return string
-     */
-    private function getFile()
+    public function testCachePathIsCreated(): void
     {
-        return __DIR__.'/.php_cs.cache';
+        $dir = __DIR__.'/../Fixtures/cache-file-handler/one/two/three';
+        $file = $dir.'/cache.json';
+        $cleanPath = static function () use ($dir, $file): void {
+            @unlink($file);
+            for ($i = 0; $i <= 2; ++$i) {
+                @rmdir(0 === $i ? $dir : \dirname($dir, $i));
+            }
+        };
+
+        $cleanPath();
+
+        self::assertDirectoryDoesNotExist($dir);
+        self::assertFileDoesNotExist($file);
+
+        $handler = new FileHandler($file);
+        $handler->write(new Cache($this->createSignature()));
+
+        self::assertDirectoryExists($dir);
+        self::assertFileExists($file);
+
+        $cleanPath();
+    }
+
+    public function testReadIgnoresAndWriteRefusesSymlinkedCachePathWithoutOverwritingTarget(): void
+    {
+        $dir = __DIR__.'/../Fixtures/cache-file-handler';
+        $victim = $dir.'/symlink-victim.test';
+        $link = $dir.'/symlinked-cache.test';
+        @unlink($link);
+        @unlink($victim);
+        file_put_contents($victim, 'do not overwrite me');
+
+        if (!@symlink($victim, $link)) {
+            @unlink($victim);
+            self::markTestSkipped('Cannot create symbolic links on this system.');
+        }
+
+        $handler = new FileHandler($link);
+
+        self::assertNull($handler->read());
+
+        try {
+            $handler->write(new Cache($this->createSignature()));
+            self::fail('Expected IOException was not thrown.');
+        } catch (IOException $e) {
+            self::assertStringContainsString('is a symbolic link', $e->getMessage());
+        } finally {
+            self::assertStringEqualsFile($victim, 'do not overwrite me', 'The symlink target must not be overwritten.');
+            @unlink($link);
+            @unlink($victim);
+        }
+    }
+
+    private function getFile(): string
+    {
+        return __DIR__.'/.php-cs-fixer.cache';
+    }
+
+    private function createSignature(): SignatureInterface
+    {
+        return new Signature(
+            \PHP_VERSION,
+            '2.0',
+            '    ',
+            \PHP_EOL,
+            ['foo' => true, 'bar' => false],
+            'baz',
+        );
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -13,7 +15,11 @@
 namespace PhpCsFixer\Tests\Smoke;
 
 use Keradus\CliExecutor\CommandExecutor;
-use PHPUnit\Framework\TestCase;
+use PhpCsFixer\Preg;
+use PHPUnit\Framework\Attributes\CoversNothing;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\Large;
+use PHPUnit\Framework\Attributes\RequiresOperatingSystem;
 
 /**
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
@@ -21,54 +27,66 @@ use PHPUnit\Framework\TestCase;
  * @internal
  *
  * @requires OS Linux|Darwin
+ *
  * @coversNothing
+ *
  * @group covers-nothing
+ *
+ * @large
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
-final class StdinTest extends TestCase
+#[RequiresOperatingSystem('Linux|Darwin')]
+#[CoversNothing]
+#[Group('covers-nothing')]
+#[Large]
+final class StdinTest extends AbstractSmokeTestCase
 {
-    public function testFixingStdin()
+    public function testFixingStdin(): void
     {
         $cwd = __DIR__.'/../..';
 
-        $command = 'php php-cs-fixer fix --rules=@PSR2 --dry-run --diff --using-cache=no';
+        $command = 'php php-cs-fixer fix --sequential --rules=@PSR2 --dry-run --diff --using-cache=no';
         $inputFile = 'tests/Fixtures/Integration/set/@PSR2.test-in.php';
 
-        $fileResult = CommandExecutor::create("${command} ${inputFile}", $cwd)->getResult(false);
-        $stdinResult = CommandExecutor::create("${command} - < ${inputFile}", $cwd)->getResult(false);
+        $fileResult = CommandExecutor::create("{$command} {$inputFile}", $cwd)->getResult(false);
+        $stdinResult = CommandExecutor::create("{$command} - < {$inputFile}", $cwd)->getResult(false);
 
-        $this->assertSame(
-            [
-                'code' => $fileResult->getCode(),
-                'error' => str_replace(
-                    'Paths from configuration file have been overridden by paths provided as command arguments.'."\n",
-                    '',
-                    $fileResult->getError()
-                ),
-                'output' => str_ireplace(
-                    str_replace('/', \DIRECTORY_SEPARATOR, basename(realpath($cwd)).'/'.$inputFile),
-                    'php://stdin',
-                    $this->unifyFooter($fileResult->getOutput())
-                ),
-            ],
-            [
-                'code' => $stdinResult->getCode(),
-                'error' => $stdinResult->getError(),
-                'output' => $this->unifyFooter($stdinResult->getOutput()),
-            ]
+        self::assertSame($fileResult->getCode(), $stdinResult->getCode());
+
+        $expectedError = str_replace(
+            'Paths from configuration have been overridden by paths provided as command arguments.'."\n",
+            '',
+            $fileResult->getError(),
+        );
+
+        self::assertSame($expectedError, $stdinResult->getError());
+
+        $fileResult = $this->unifyFooter($fileResult->getOutput());
+
+        $file = realpath($cwd).'/'.$inputFile;
+        $path = str_replace('/', \DIRECTORY_SEPARATOR, $file);
+        $fileResult = str_replace("\n--- ".$path."\n", "\n--- php://stdin\n", $fileResult);
+        $fileResult = str_replace("\n+++ ".$path."\n", "\n+++ php://stdin\n", $fileResult);
+
+        $fileResult = Preg::replace(
+            '#/?'.preg_quote($inputFile, '#').'#',
+            'php://stdin',
+            $fileResult,
+        );
+
+        self::assertSame(
+            $fileResult,
+            $this->unifyFooter($stdinResult->getOutput()),
         );
     }
 
-    /**
-     * @param string $output
-     *
-     * @return string
-     */
-    private function unifyFooter($output)
+    private function unifyFooter(string $output): string
     {
-        return preg_replace(
-            '/Checked all files in \d+\.\d+ seconds, \d+\.\d+ MB memory used/',
+        return Preg::replace(
+            '/Found \d+ of \d+ files that can be fixed in \d+\.\d+ seconds, \d+\.\d+ MB memory used/',
             'Footer',
-            $output
+            $output,
         );
     }
 }

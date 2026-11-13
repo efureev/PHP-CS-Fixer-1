@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,95 +14,74 @@
 
 namespace PhpCsFixer\Tests\FixerDefinition;
 
+use PhpCsFixer\FixerDefinition\CodeSampleInterface;
 use PhpCsFixer\FixerDefinition\FixerDefinition;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @internal
  *
  * @covers \PhpCsFixer\FixerDefinition\FixerDefinition
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(FixerDefinition::class)]
 final class FixerDefinitionTest extends TestCase
 {
-    public function testGetSummary()
+    public function testGetSummary(): void
     {
         $definition = new FixerDefinition('Foo', []);
 
-        $this->assertSame('Foo', $definition->getSummary());
+        self::assertSame('Foo', $definition->getSummary());
     }
 
-    public function testGetCodeSamples()
+    public function testGetCodeSamples(): void
     {
-        $definition = new FixerDefinition('', ['Bar', 'Baz']);
+        $samples = [
+            $this->createCodeSampleDouble(),
+            $this->createCodeSampleDouble(),
+        ];
 
-        $this->assertSame(['Bar', 'Baz'], $definition->getCodeSamples());
+        $definition = new FixerDefinition('', $samples);
+
+        self::assertSame($samples, $definition->getCodeSamples());
     }
 
-    public function testGetDescription()
+    public function testGetDescription(): void
     {
         $definition = new FixerDefinition('', []);
 
-        $this->assertNull($definition->getDescription());
+        self::assertNull($definition->getDescription());
 
         $definition = new FixerDefinition('', [], 'Foo');
 
-        $this->assertSame('Foo', $definition->getDescription());
+        self::assertSame('Foo', $definition->getDescription());
     }
 
-    /**
-     * @group legacy
-     * @expectedDeprecation PhpCsFixer\FixerDefinition\FixerDefinition::getConfigurationDescription is deprecated and will be removed in 3.0.
-     */
-    public function testGetConfigurationDescription()
+    public function testGetRiskyDescription(): void
     {
         $definition = new FixerDefinition('', []);
 
-        $this->assertNull($definition->getConfigurationDescription());
+        self::assertNull($definition->getRiskyDescription());
 
         $definition = new FixerDefinition('', [], null, 'Foo');
 
-        $this->assertNull($definition->getConfigurationDescription());
-
-        $definition = new FixerDefinition('', [], null, 'Foo', []);
-
-        $this->assertSame('Foo', $definition->getConfigurationDescription());
+        self::assertSame('Foo', $definition->getRiskyDescription());
     }
 
-    /**
-     * @group legacy
-     * @expectedDeprecation Argument #5 of FixerDefinition::__construct() is deprecated and will be removed in 3.0.
-     * @expectedDeprecation PhpCsFixer\FixerDefinition\FixerDefinition::getDefaultConfiguration is deprecated and will be removed in 3.0.
-     */
-    public function testGetDefaultConfiguration()
+    private function createCodeSampleDouble(): CodeSampleInterface
     {
-        $definition = new FixerDefinition('', []);
+        return new class implements CodeSampleInterface {
+            public function getCode(): string
+            {
+                throw new \LogicException('Not implemented.');
+            }
 
-        $this->assertNull($definition->getDefaultConfiguration());
-
-        $definition = new FixerDefinition('', [], null, null, ['Foo', 'Bar']);
-
-        $this->assertSame(['Foo', 'Bar'], $definition->getDefaultConfiguration());
-    }
-
-    public function testGetRiskyDescription()
-    {
-        $definition = new FixerDefinition('', []);
-
-        $this->assertNull($definition->getRiskyDescription());
-
-        $definition = new FixerDefinition('', [], null, 'Foo');
-
-        $this->assertSame('Foo', $definition->getRiskyDescription());
-    }
-
-    /**
-     * @group legacy
-     * @expectedDeprecation Arguments #5 and #6 of FixerDefinition::__construct() are deprecated and will be removed in 3.0, use argument #4 instead.
-     */
-    public function testLegacyGetRiskyDescription()
-    {
-        $definition = new FixerDefinition('', [], null, null, null, 'Foo');
-
-        $this->assertSame('Foo', $definition->getRiskyDescription());
+            public function getConfiguration(): ?array
+            {
+                throw new \LogicException('Not implemented.');
+            }
+        };
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,9 +14,11 @@
 
 namespace PhpCsFixer\Tests\Doctrine\Annotation;
 
-use Doctrine\Common\Annotations\DocLexer;
+use PhpCsFixer\Doctrine\Annotation\DocLexer;
 use PhpCsFixer\Doctrine\Annotation\Token;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @author Andreas Möller <am@localheinz.com>
@@ -22,32 +26,39 @@ use PhpCsFixer\Tests\TestCase;
  * @internal
  *
  * @covers \PhpCsFixer\Doctrine\Annotation\Token
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(Token::class)]
 final class TokenTest extends TestCase
 {
-    public function testDefaults()
+    public function testDefaults(): void
     {
         $token = new Token();
 
-        $this->assertSame(DocLexer::T_NONE, $token->getType());
-        $this->assertSame('', $token->getContent());
+        self::assertSame(DocLexer::T_NONE, $token->getType());
+        self::assertSame('', $token->getContent());
+        self::assertSame(0, $token->getPosition());
     }
 
-    public function testConstructorSetsValues()
+    public function testConstructorSetsValues(): void
     {
         $type = 42;
         $content = 'questionable';
+        $position = 16;
 
         $token = new Token(
             $type,
-            $content
+            $content,
+            $position,
         );
 
-        $this->assertSame($type, $token->getType());
-        $this->assertSame($content, $token->getContent());
+        self::assertSame($type, $token->getType());
+        self::assertSame($content, $token->getContent());
+        self::assertSame($position, $token->getPosition());
     }
 
-    public function testCanModifyType()
+    public function testCanModifyType(): void
     {
         $type = 42;
 
@@ -55,79 +66,77 @@ final class TokenTest extends TestCase
 
         $token->setType($type);
 
-        $this->assertSame($type, $token->getType());
+        self::assertSame($type, $token->getType());
     }
 
     /**
-     * @dataProvider provideIsTypeCases
+     * @dataProvider provideIsTypeReturnsTrueCases
      *
-     * @param int       $type
-     * @param int|int[] $types
+     * @param int|list<int> $types
      */
-    public function testIsTypeReturnsTrue($type, $types)
+    #[DataProvider('provideIsTypeReturnsTrueCases')]
+    public function testIsTypeReturnsTrue(int $type, $types): void
     {
         $token = new Token();
 
         $token->setType($type);
 
-        $this->assertTrue($token->isType($types));
+        self::assertTrue($token->isType($types));
     }
 
     /**
-     * @return array
+     * @return iterable<string, array{int, int|list<int>}>
      */
-    public function provideIsTypeCases()
+    public static function provideIsTypeReturnsTrueCases(): iterable
     {
-        return [
-            'same-value' => [
+        yield 'same-value' => [
+            42,
+            42,
+        ];
+
+        yield 'array-with-value' => [
+            42,
+            [
                 42,
-                42,
-            ],
-            'array-with-value' => [
-                42,
-                [
-                    42,
-                    9001,
-                ],
+                9_001,
             ],
         ];
     }
 
     /**
-     * @dataProvider provideIsNotTypeCases
+     * @dataProvider provideIsTypeReturnsFalseCases
      *
-     * @param int       $type
-     * @param int|int[] $types
+     * @param int|list<int> $types
      */
-    public function testIsTypeReturnsFalse($types, $type)
+    #[DataProvider('provideIsTypeReturnsFalseCases')]
+    public function testIsTypeReturnsFalse(int $type, $types): void
     {
         $token = new Token();
 
         $token->setType($type);
 
-        $this->assertFalse($token->isType($types));
+        self::assertFalse($token->isType($types));
     }
 
     /**
-     * @return array
+     * @return iterable<string, array{int, int|list<int>}>
      */
-    public function provideIsNotTypeCases()
+    public static function provideIsTypeReturnsFalseCases(): iterable
     {
-        return [
-            'different-value' => [
-                42,
-                9001,
-            ],
-            'array-without-value' => [
-                42,
-                [
-                    9001,
-                ],
+        yield 'different-value' => [
+            42,
+            9_001,
+        ];
+
+        yield 'array-without-value' => [
+            42,
+            [
+                9_001,
             ],
         ];
     }
 
-    public function testCanModifyContent()
+    public function testCanModifyContent(): void
     {
         $content = 'questionable';
 
@@ -135,10 +144,10 @@ final class TokenTest extends TestCase
 
         $token->setContent($content);
 
-        $this->assertSame($content, $token->getContent());
+        self::assertSame($content, $token->getContent());
     }
 
-    public function testCanClearContent()
+    public function testCanClearContent(): void
     {
         $content = 'questionable';
 
@@ -147,6 +156,6 @@ final class TokenTest extends TestCase
         $token->setContent($content);
         $token->clear();
 
-        $this->assertSame('', $token->getContent());
+        self::assertSame('', $token->getContent());
     }
 }

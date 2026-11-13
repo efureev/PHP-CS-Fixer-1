@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -14,96 +16,139 @@ namespace PhpCsFixer\Tests\FixerConfiguration;
 
 use PhpCsFixer\FixerConfiguration\AllowedValueSubset;
 use PhpCsFixer\Tests\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * @internal
  *
  * @covers \PhpCsFixer\FixerConfiguration\AllowedValueSubset
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(AllowedValueSubset::class)]
 final class AllowedValueSubsetTest extends TestCase
 {
-    public function testConstructor()
+    /**
+     * @param non-empty-list<string> $expected
+     * @param non-empty-list<string> $input
+     *
+     * @dataProvider provideGetAllowedValuesAreSortedCases
+     */
+    #[DataProvider('provideGetAllowedValuesAreSortedCases')]
+    public function testGetAllowedValuesAreSorted(array $expected, array $input): void
     {
-        $this->assertInternalType('callable', new AllowedValueSubset(['foo', 'bar']));
+        $subset = new AllowedValueSubset($input);
+
+        self::assertSame($expected, $subset->getAllowedValues());
+    }
+
+    /**
+     * @return iterable<int, array{list<string>, list<string>}>
+     */
+    public static function provideGetAllowedValuesAreSortedCases(): iterable
+    {
+        yield [
+            ['bar', 'foo'],
+            ['foo', 'bar'],
+        ];
+
+        yield [
+            ['bar', 'Foo'],
+            ['Foo', 'bar'],
+        ];
     }
 
     /**
      * @param mixed $inputValue
-     * @param bool  $expectedResult
      *
      * @dataProvider provideInvokeCases
      */
-    public function testInvoke($inputValue, $expectedResult)
+    #[DataProvider('provideInvokeCases')]
+    public function testInvoke($inputValue, bool $expectedResult): void
     {
         $subset = new AllowedValueSubset(['foo', 'bar']);
 
-        $this->assertSame($expectedResult, $subset($inputValue));
+        self::assertSame($expectedResult, $subset($inputValue));
     }
 
-    public function provideInvokeCases()
+    /**
+     * @return iterable<int, array{mixed, bool}>
+     */
+    public static function provideInvokeCases(): iterable
     {
-        return [
-            [
-                ['foo', 'bar'],
-                true,
-            ],
-            [
-                ['bar', 'foo'],
-                true,
-            ],
-            [
-                ['foo'],
-                true,
-            ],
-            [
-                ['bar'],
-                true,
-            ],
-            [
-                [],
-                true,
-            ],
-            [
-                ['foo', 'bar', 'baz'],
-                false,
-            ],
-            [
-                ['baz'],
-                false,
-            ],
-            [
-                1,
-                false,
-            ],
-            [
-                1.2,
-                false,
-            ],
-            [
-                'foo',
-                false,
-            ],
-            [
-                new \stdClass(),
-                false,
-            ],
-            [
-                true,
-                false,
-            ],
-            [
-                null,
-                false,
-            ],
+        yield [
+            ['foo', 'bar'],
+            true,
+        ];
+
+        yield [
+            ['bar', 'foo'],
+            true,
+        ];
+
+        yield [
+            ['foo'],
+            true,
+        ];
+
+        yield [
+            ['bar'],
+            true,
+        ];
+
+        yield [
+            [],
+            true,
+        ];
+
+        yield [
+            ['foo', 'bar', 'baz'],
+            false,
+        ];
+
+        yield [
+            ['baz'],
+            false,
+        ];
+
+        yield [
+            1,
+            false,
+        ];
+
+        yield [
+            1.2,
+            false,
+        ];
+
+        yield [
+            'foo',
+            false,
+        ];
+
+        yield [
+            new \stdClass(),
+            false,
+        ];
+
+        yield [
+            true,
+            false,
+        ];
+
+        yield [
+            null,
+            false,
         ];
     }
 
-    public function testGetAllowedValues()
+    public function testGetAllowedValues(): void
     {
-        $values = ['foo', 'bar'];
+        $values = ['bar', 'foo'];
 
         $subset = new AllowedValueSubset($values);
 
-        $this->assertSame($values, $subset->getAllowedValues());
+        self::assertSame($values, $subset->getAllowedValues());
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -13,6 +15,8 @@
 namespace PhpCsFixer\Tests\Linter;
 
 use PhpCsFixer\Linter\Linter;
+use PhpCsFixer\Linter\LinterInterface;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
  * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
@@ -20,18 +24,18 @@ use PhpCsFixer\Linter\Linter;
  * @internal
  *
  * @covers \PhpCsFixer\Linter\Linter
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(Linter::class)]
 final class LinterTest extends AbstractLinterTestCase
 {
-    public function testIsAsync()
+    public function testIsAsync(): void
     {
-        $this->assertSame(!\defined('TOKEN_PARSE'), $this->createLinter()->isAsync());
+        self::assertSame(!class_exists(\CompileError::class), $this->createLinter()->isAsync());
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function createLinter()
+    protected function createLinter(): LinterInterface
     {
         return new Linter();
     }

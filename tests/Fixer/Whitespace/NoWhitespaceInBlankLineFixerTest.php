@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of PHP CS Fixer.
  *
@@ -12,157 +14,179 @@
 
 namespace PhpCsFixer\Tests\Fixer\Whitespace;
 
+use PhpCsFixer\Fixer\Whitespace\NoWhitespaceInBlankLineFixer;
 use PhpCsFixer\Tests\Test\AbstractFixerTestCase;
 use PhpCsFixer\WhitespacesFixerConfig;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
- *
  * @internal
  *
  * @covers \PhpCsFixer\Fixer\Whitespace\NoWhitespaceInBlankLineFixer
+ *
+ * @extends AbstractFixerTestCase<\PhpCsFixer\Fixer\Whitespace\NoWhitespaceInBlankLineFixer>
+ *
+ * @author Dariusz Rumiński <dariusz.ruminski@gmail.com>
+ *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise.
  */
+#[CoversClass(NoWhitespaceInBlankLineFixer::class)]
 final class NoWhitespaceInBlankLineFixerTest extends AbstractFixerTestCase
 {
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
      * @dataProvider provideFixCases
      */
-    public function testFix($expected, $input = null)
+    #[DataProvider('provideFixCases')]
+    public function testFix(string $expected, ?string $input = null): void
     {
         $this->doTest($expected, $input);
     }
 
-    public function provideFixCases()
+    /**
+     * @return iterable<int, array{0: string, 1?: string}>
+     */
+    public static function provideFixCases(): iterable
     {
-        return [
-            [
-                "<?php\n",
-            ],
-            [
-                '<?php  ',
-            ],
-            [
-                '<?php
+        yield [
+            "<?php\n",
+        ];
+
+        yield [
+            '<?php  ',
+        ];
+
+        yield [
+            '<?php
 ',
-                '<?php
+            '<?php
   ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
 ',
-                '<?php
+            '<?php
      '.'
   ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 
 $a = 1; ',
-                '<?php
+            '<?php
      '.'
 $a = 1; ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
 $r = 5 +6;                   '.'
 
 $t = true> 9;       '.'
 ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     $a = 1;   ',
-            ],
-            [
-                "<?php
+        ];
+
+        yield [
+            "<?php
 \t\$b = 1;\t\t",
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     $b = 2;
 ',
-                '<?php
+            '<?php
     $b = 2;
     ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     $b = 3;
 
 
 ',
-                '<?php
+            '<?php
     $b = 3;
     '.'
     '.'
     ',
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            '<?php
     $b = 4;
 
 
 
     $b += 4;',
-                '<?php
+            '<?php
     $b = 4;
     '.'
     '.'
     '.'
     $b += 4;',
-            ],
-            [
-                "<?php\n\n\n\$b = 5;",
-                "<?php\n                \n\t\n\$b = 5;",
-            ],
-            [
-                "<?php\necho 1;\n?>\n\n\n\n",
-            ],
-            [
-                "<?php\necho <<<HTML\ndata     \n  \n \t  \n     \nHTML\n;\n//a",
-            ],
-            [
-                "<?php\n\$sql = 'SELECT * FROM products WHERE description = \"This product\n   \nis nice\"';",
-            ],
-            [
-                '<?php
+        ];
+
+        yield [
+            "<?php\n\n\n\$b = 5;",
+            "<?php\n                \n\t\n\$b = 5;",
+        ];
+
+        yield [
+            "<?php\necho 1;\n?>\n\n\n\n",
+        ];
+
+        yield [
+            "<?php\necho <<<HTML\ndata     \n  \n \t  \n     \nHTML\n;\n//a",
+        ];
+
+        yield [
+            "<?php\n\$sql = 'SELECT * FROM products WHERE description = \"This product\n   \nis nice\"';",
+        ];
+
+        yield [
+            '<?php
     /**
      * @const Foo.
      */
     const FOO = "BAR";
 ',
-            ],
-            [
-                "<?php\n\n    \$a = 1;\n\n    \$b = 2;",
-                "<?php\n\n    \$a = 1;\n    \n    \$b = 2;",
-            ],
+        ];
+
+        yield [
+            "<?php\n\n    \$a = 1;\n\n    \$b = 2;",
+            "<?php\n\n    \$a = 1;\n    \n    \$b = 2;",
         ];
     }
 
     /**
-     * @param string      $expected
-     * @param null|string $input
-     *
-     * @dataProvider provideMessyWhitespacesCases
+     * @dataProvider provideWithWhitespacesConfigCases
      */
-    public function testMessyWhitespaces($expected, $input = null)
+    #[DataProvider('provideWithWhitespacesConfigCases')]
+    public function testWithWhitespacesConfig(string $expected, ?string $input = null): void
     {
         $this->fixer->setWhitespacesConfig(new WhitespacesFixerConfig("\t", "\r\n"));
 
         $this->doTest($expected, $input);
     }
 
-    public function provideMessyWhitespacesCases()
+    /**
+     * @return iterable<int, array{string, string}>
+     */
+    public static function provideWithWhitespacesConfigCases(): iterable
     {
-        return [
-            [
-                "<?php\r\n\r\n    \$a = 1;\r\n\r\n    \$b = 2;",
-                "<?php\r\n\r\n    \$a = 1;\r\n    \r\n    \$b = 2;",
-            ],
+        yield [
+            "<?php\r\n\r\n    \$a = 1;\r\n\r\n    \$b = 2;",
+            "<?php\r\n\r\n    \$a = 1;\r\n    \r\n    \$b = 2;",
         ];
     }
 }
